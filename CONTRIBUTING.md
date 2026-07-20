@@ -84,3 +84,9 @@ pull request. CI must pass before merge.
 
 Security vulnerabilities should not be reported through a public issue. Follow
 [SECURITY.md](SECURITY.md) instead.
+
+## Maintainer releases
+
+GitScope releases are published from validated version tags. Maintainers must
+follow [docs/releasing.md](docs/releasing.md); in particular, do not push a
+release tag until the preparation commit is on `main` and CI is green.

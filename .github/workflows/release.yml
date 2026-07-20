@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  github-release:
+    name: Build and publish GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv and Python 3.13
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install locked development environment
+        run: uv sync --frozen --all-groups
+
+      - name: Validate tag and release metadata
+        run: >-
+          uv run --frozen python scripts/validate_release.py
+          --tag "${GITHUB_REF_NAME}"
+
+      - name: Lint
+        run: uv run --frozen ruff check .
+
+      - name: Check formatting
+        run: uv run --frozen ruff format --check .
+
+      - name: Type check
+        run: uv run --frozen mypy gitscope scripts
+
+      - name: Test
+        run: uv run --frozen pytest
+
+      - name: Build wheel and source distribution
+        run: uv build --no-sources
+
+      - name: Verify distribution contents
+        run: >-
+          uv run --frozen python scripts/verify_wheel.py
+          dist/*.whl --sdist dist/*.tar.gz
+          --expected-version "${GITHUB_REF_NAME#v}"
+
+      - name: Install wheel in an isolated environment
+        run: |
+          uv venv .wheel-venv --python 3.13
+          uv pip install --python .wheel-venv/bin/python dist/*.whl
+
+      - name: Smoke test installed wheel
+        run: >-
+          uv run --frozen python scripts/smoke_test_wheel.py
+          --executable .wheel-venv/bin/gitscope
+          --report tests/fixtures/minimal-report.json
+          --expected-version "${GITHUB_REF_NAME#v}"
+
+      - name: Generate SHA-256 checksums
+        run: >-
+          uv run --frozen python scripts/create_checksums.py
+          dist/*.whl dist/*.tar.gz --output dist/SHA256SUMS
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/*.whl \
+            dist/*.tar.gz \
+            dist/SHA256SUMS \
+            --verify-tag \
+            --latest \
+            --title "GitScope ${GITHUB_REF_NAME#v}" \
+            --notes-file "docs/releases/${GITHUB_REF_NAME}.md"
+
+      - name: Show published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "${GITHUB_REF_NAME}"

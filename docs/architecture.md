@@ -142,3 +142,9 @@ source tree.
 The smoke test regenerates all offline outputs and the résumé from a synthetic
 fixture. This verifies the console entry point, declared runtime dependencies,
 template packaging, Plotly runtime export, and report compatibility together.
+
+GitHub releases are tag-gated. Pushing a stable semantic-version tag starts a
+separate workflow that repeats all quality and distribution checks, requires the
+tag to match both package version declarations, creates SHA-256 checksums, and
+publishes the wheel and source archive. Ordinary branch pushes never publish a
+release. See [releasing.md](releasing.md) for the maintainer procedure.

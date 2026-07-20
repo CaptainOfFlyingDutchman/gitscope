@@ -3,21 +3,29 @@
 GitScope requires Python 3.13 or newer and Git on `PATH`. The recommended
 installer is [uv](https://docs.astral.sh/uv/).
 
-## Install the released package
+## Install a GitHub release
 
-After GitScope is published, install it as an isolated command-line tool:
+GitScope is distributed through GitHub Releases, not PyPI. Install the versioned
+wheel as an isolated command-line tool:
 
 ```bash
-uv tool install gitscope
+uv tool install \
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.0/gitscope-0.1.0-py3-none-any.whl
 gitscope --version
 gitscope doctor
 ```
 
-Upgrade an existing tool installation with:
+The project named `gitscope` on PyPI is unrelated to this repository. Do not use
+`uv tool install gitscope` to install this project.
+
+Alternatively, install directly from the immutable Git tag:
 
 ```bash
-uv tool upgrade gitscope
+uv tool install \
+  'git+https://github.com/CaptainOfFlyingDutchman/gitscope.git@v0.1.0'
 ```
+
+To upgrade later, install the new version's wheel URL with `--force`.
 
 ## Install a locally built wheel
 
@@ -40,8 +48,8 @@ uv sync --all-groups
 uv run gitscope --help
 ```
 
-This is the contributor workflow. End users should prefer the isolated tool
-installation once a release is available.
+This is the contributor workflow. End users should prefer the versioned GitHub
+release wheel.
 
 ## Configure GitHub access
 

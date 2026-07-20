@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 import tarfile
+import tomllib
 from pathlib import Path, PurePosixPath
 from zipfile import BadZipFile, ZipFile
 
@@ -29,19 +30,23 @@ FORBIDDEN_PARTS = {
 }
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo"}
 REQUIRED_SDIST_SUFFIXES = {
+    "CHANGELOG.md",
     "CONTRIBUTING.md",
     "LICENSE",
     "README.md",
     "SECURITY.md",
     "docs/architecture.md",
     "docs/installation.md",
+    "docs/releasing.md",
     "pyproject.toml",
+    "scripts/create_checksums.py",
     "scripts/smoke_test_wheel.py",
+    "scripts/validate_release.py",
     "tests/fixtures/minimal-report.json",
 }
 
 
-def verify_wheel(wheel_path: Path) -> None:
+def verify_wheel(wheel_path: Path, expected_version: str) -> None:
     """Raise ValueError when a wheel is incomplete or contains private state."""
     try:
         with ZipFile(wheel_path) as archive:
@@ -54,7 +59,7 @@ def verify_wheel(wheel_path: Path) -> None:
     except (BadZipFile, OSError) as exc:
         raise ValueError(f"Could not inspect wheel: {wheel_path}") from exc
 
-    required_metadata = ("Name: gitscope", "Version: 0.1.0")
+    required_metadata = ("Name: gitscope", f"Version: {expected_version}")
     missing_metadata = [item for item in required_metadata if item not in metadata]
     if missing_metadata:
         raise ValueError(f"Wheel metadata is missing: {', '.join(missing_metadata)}")
@@ -62,7 +67,7 @@ def verify_wheel(wheel_path: Path) -> None:
         raise ValueError("Wheel does not define the gitscope console entry point")
 
 
-def verify_sdist(sdist_path: Path) -> None:
+def verify_sdist(sdist_path: Path, expected_version: str) -> None:
     """Raise ValueError when the source archive is incomplete or unsafe."""
     try:
         with tarfile.open(sdist_path, mode="r:gz") as archive:
@@ -70,9 +75,10 @@ def verify_sdist(sdist_path: Path) -> None:
     except (OSError, tarfile.TarError) as exc:
         raise ValueError(f"Could not inspect source distribution: {sdist_path}") from exc
 
+    required_suffixes = REQUIRED_SDIST_SUFFIXES | {f"docs/releases/v{expected_version}.md"}
     missing = sorted(
         suffix
-        for suffix in REQUIRED_SDIST_SUFFIXES
+        for suffix in required_suffixes
         if not any(member.endswith(f"/{suffix}") for member in members)
     )
     if missing:
@@ -110,15 +116,28 @@ def _single_member(members: set[str], suffix: str) -> str:
     return matching[0]
 
 
+def _project_version(path: Path) -> str:
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+        version = payload["project"]["version"]
+    except (FileNotFoundError, KeyError, OSError, tomllib.TOMLDecodeError) as exc:
+        raise ValueError(f"Could not read project version from {path}") from exc
+    if not isinstance(version, str):
+        raise ValueError(f"Project version is not a string in {path}")
+    return version
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("wheel", type=Path)
     parser.add_argument("--sdist", type=Path)
+    parser.add_argument("--expected-version")
     args = parser.parse_args()
     try:
-        verify_wheel(args.wheel)
+        expected_version = args.expected_version or _project_version(Path("pyproject.toml"))
+        verify_wheel(args.wheel, expected_version)
         if args.sdist is not None:
-            verify_sdist(args.sdist)
+            verify_sdist(args.sdist, expected_version)
     except ValueError as exc:
         print(f"Distribution verification failed: {exc}", file=sys.stderr)
         return 1

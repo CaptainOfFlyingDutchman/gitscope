@@ -30,6 +30,7 @@ Homepage = "https://github.com/CaptainOfFlyingDutchman/gitscope"
 Documentation = "https://github.com/CaptainOfFlyingDutchman/gitscope#readme"
 Issues = "https://github.com/CaptainOfFlyingDutchman/gitscope/issues"
 Source = "https://github.com/CaptainOfFlyingDutchman/gitscope"
+Changelog = "https://github.com/CaptainOfFlyingDutchman/gitscope/blob/main/CHANGELOG.md"
 
 [project.scripts]
 gitscope = "gitscope.cli:app"
@@ -60,6 +61,7 @@ include = [
     "/.env.example",
     "/.gitscope-identities.example",
     "/.gitscope-repositories.example",
+    "/CHANGELOG.md",
     "/CONTRIBUTING.md",
     "/LICENSE",
     "/README.md",

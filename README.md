@@ -113,21 +113,25 @@ Type checking:
 # Installation and Quick Start
 
 GitScope requires Python 3.13 or newer, Git, and
-[uv](https://docs.astral.sh/uv/). Until the first public package is released,
-run it from a source checkout:
+[uv](https://docs.astral.sh/uv/). Install the versioned GitHub release wheel as
+an isolated command-line tool:
+
+```bash
+uv tool install \
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.0/gitscope-0.1.0-py3-none-any.whl
+gitscope --version
+```
+
+GitScope is distributed through GitHub Releases. The `gitscope` project on PyPI
+is unrelated; `uv tool install gitscope` installs that other project.
+
+Contributors can run GitScope from a source checkout:
 
 ```bash
 git clone https://github.com/CaptainOfFlyingDutchman/gitscope.git
 cd gitscope
 uv sync --all-groups
 uv run gitscope --help
-```
-
-Once published, the recommended isolated installation will be:
-
-```bash
-uv tool install gitscope
-gitscope --version
 ```
 
 Configure a GitHub token and private analysis scope:
@@ -169,6 +173,7 @@ schema compatibility, pull requests, and distribution verification.
 gitscope/
 
 ├── README.md
+├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 ├── pyproject.toml
@@ -176,12 +181,18 @@ gitscope/
 ├── .python-version
 ├── LICENSE
 ├── .gitignore
-├── .github/workflows/ci.yml
+├── .github/workflows/
+│   ├── ci.yml
+│   └── release.yml
 ├── docs/
 │   ├── architecture.md
-│   └── installation.md
+│   ├── installation.md
+│   ├── releasing.md
+│   └── releases/
 ├── scripts/
+│   ├── create_checksums.py
 │   ├── smoke_test_wheel.py
+│   ├── validate_release.py
 │   └── verify_wheel.py
 
 ├── gitscope/
@@ -732,10 +743,12 @@ The focus is on documentation and visualization of engineering work.
 
 # Success Criteria
 
-A successful GitScope release should be something an experienced engineer would happily install with:
+A successful GitScope release should be something an experienced engineer would
+happily install from its versioned GitHub release:
 
-```
-uv tool install gitscope
+```bash
+uv tool install \
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.0/gitscope-0.1.0-py3-none-any.whl
 ```
 
 and immediately use to generate a polished report for any GitHub organization they have access to.

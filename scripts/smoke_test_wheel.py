@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 
 
@@ -31,7 +32,7 @@ def run_command(executable: Path, arguments: list[str], working_directory: Path)
     return output
 
 
-def smoke_test(executable: Path, report_path: Path) -> None:
+def smoke_test(executable: Path, report_path: Path, expected_version: str) -> None:
     """Verify entry points, diagnostics, templates, charts, and offline outputs."""
     executable = executable.resolve()
     report_path = report_path.resolve()
@@ -43,7 +44,7 @@ def smoke_test(executable: Path, report_path: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="gitscope-wheel-") as temporary:
         working_directory = Path(temporary)
         version_output = run_command(executable, ["--version"], working_directory)
-        if "GitScope 0.1.0" not in version_output:
+        if f"GitScope {expected_version}" not in version_output:
             raise RuntimeError("Installed command reported an unexpected version")
 
         help_output = run_command(executable, ["--help"], working_directory)
@@ -103,14 +104,24 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--executable", required=True, type=Path)
     parser.add_argument("--report", required=True, type=Path)
+    parser.add_argument("--expected-version")
     args = parser.parse_args()
     try:
-        smoke_test(args.executable, args.report)
-    except (OSError, RuntimeError, ValueError) as exc:
+        expected_version = args.expected_version or _project_version(Path("pyproject.toml"))
+        smoke_test(args.executable, args.report, expected_version)
+    except (OSError, RuntimeError, ValueError, KeyError, tomllib.TOMLDecodeError) as exc:
         print(f"Installed-wheel smoke test failed: {exc}", file=sys.stderr)
         return 1
     print("Installed-wheel smoke test passed")
     return 0
+
+
+def _project_version(path: Path) -> str:
+    payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    version = payload["project"]["version"]
+    if not isinstance(version, str):
+        raise ValueError(f"Project version is not a string in {path}")
+    return version
 
 
 if __name__ == "__main__":
