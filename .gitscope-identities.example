@@ -1,7 +1,8 @@
 # Optional aliases used in historical Git commits.
 # GitScope already includes the requested GitHub username, profile name, and
 # both GitHub noreply email formats. Keep the real file private and uncommitted.
-# A former username automatically adds its name and both noreply email formats.
+# A former username adds its Git author name and both noreply email formats.
+# GitHub links PRs and reviews to the account, so renamed logins need no API alias.
 username: YourFormerGitHubUsername
 name: Your Git Author Name
 email: you@example.com
