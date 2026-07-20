@@ -5,10 +5,54 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import time
 from collections.abc import Mapping
+from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
+
+
+class CacheTarget(StrEnum):
+    """Regenerable cache sections that may be inspected or cleared."""
+
+    GRAPHQL = "graphql"
+    REPOSITORIES = "repositories"
+    ALL = "all"
+
+
+@dataclass(frozen=True, slots=True)
+class CacheSection:
+    """Content-free metadata about one cache section."""
+
+    name: str
+    path: Path
+    exists: bool
+    entries: int
+    size_bytes: int
+
+
+@dataclass(frozen=True, slots=True)
+class CacheInventory:
+    """Safe aggregate metadata for the GitScope cache."""
+
+    root: Path
+    graphql: CacheSection
+    repositories: CacheSection
+
+    @property
+    def size_bytes(self) -> int:
+        return self.graphql.size_bytes + self.repositories.size_bytes
+
+
+@dataclass(frozen=True, slots=True)
+class CacheClearResult:
+    """Metadata about cache content removed by an explicit request."""
+
+    target: CacheTarget
+    sections_removed: tuple[str, ...]
+    bytes_reclaimed: int
 
 
 class JsonCache:
@@ -55,3 +99,96 @@ class JsonCache:
 
     def _path(self, key: str) -> Path:
         return self.directory / f"{key}.json"
+
+
+def inspect_cache(root: Path) -> CacheInventory:
+    """Inspect cache counts and disk use without parsing or exposing content."""
+    graphql_path = root / CacheTarget.GRAPHQL.value
+    repositories_path = root / CacheTarget.REPOSITORIES.value
+    graphql = CacheSection(
+        name=CacheTarget.GRAPHQL.value,
+        path=graphql_path,
+        exists=graphql_path.exists(),
+        entries=_graphql_entry_count(graphql_path),
+        size_bytes=_path_size(graphql_path),
+    )
+    repositories = CacheSection(
+        name=CacheTarget.REPOSITORIES.value,
+        path=repositories_path,
+        exists=repositories_path.exists(),
+        entries=_repository_mirror_count(repositories_path),
+        size_bytes=_path_size(repositories_path),
+    )
+    return CacheInventory(root=root, graphql=graphql, repositories=repositories)
+
+
+def clear_cache(root: Path, target: CacheTarget) -> CacheClearResult:
+    """Remove only explicitly named, regenerable cache sections."""
+    inventory = inspect_cache(root)
+    selected = (
+        (inventory.graphql, inventory.repositories)
+        if target is CacheTarget.ALL
+        else (getattr(inventory, target.value),)
+    )
+    removed: list[str] = []
+    reclaimed = 0
+    for section in selected:
+        if not section.exists:
+            continue
+        _remove_cache_section(section.path)
+        removed.append(section.name)
+        reclaimed += section.size_bytes
+    return CacheClearResult(
+        target=target,
+        sections_removed=tuple(removed),
+        bytes_reclaimed=reclaimed,
+    )
+
+
+def _graphql_entry_count(path: Path) -> int:
+    if not path.is_dir():
+        return 0
+    try:
+        return sum(item.is_file() and item.suffix == ".json" for item in path.iterdir())
+    except OSError:
+        return 0
+
+
+def _repository_mirror_count(path: Path) -> int:
+    if not path.is_dir():
+        return 0
+    try:
+        return sum(
+            mirror.is_dir()
+            for owner in path.iterdir()
+            if owner.is_dir()
+            for mirror in owner.iterdir()
+            if mirror.name.endswith(".git")
+        )
+    except OSError:
+        return 0
+
+
+def _path_size(path: Path) -> int:
+    if not path.exists():
+        return 0
+    if path.is_file() or path.is_symlink():
+        try:
+            return path.lstat().st_size
+        except OSError:
+            return 0
+    total = 0
+    for directory, _subdirectories, filenames in os.walk(path, followlinks=False):
+        for filename in filenames:
+            try:
+                total += (Path(directory) / filename).lstat().st_size
+            except OSError:
+                continue
+    return total
+
+
+def _remove_cache_section(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink(missing_ok=True)
+    elif path.is_dir():
+        shutil.rmtree(path)

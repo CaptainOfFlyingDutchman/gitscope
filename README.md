@@ -165,6 +165,7 @@ gitscope/
 │   ├── cli.py
 │   ├── config.py
 │   ├── cache.py
+│   ├── diagnostics.py
 │   ├── logging.py
 │
 │   ├── github/
@@ -494,8 +495,7 @@ Cache:
 
 * repository metadata
 * GraphQL responses
-* cloned repositories
-* computed analytics
+* full bare repository mirrors
 
 Store cache under:
 
@@ -504,6 +504,60 @@ Store cache under:
 ```
 
 Subsequent executions should be significantly faster.
+
+Inspect cache metadata without exposing response payloads or private repository
+names:
+
+```bash
+gitscope cache status
+gitscope cache path
+```
+
+Clear only an explicit regenerable section. Each command asks for confirmation
+unless `--yes` is supplied:
+
+```bash
+gitscope cache clear graphql
+gitscope cache clear repositories
+gitscope cache clear all
+```
+
+`clear all` removes only the `graphql` and `repositories` subdirectories under
+`.gitscope/cache`. Reports, logs, configuration, allowlists, and identity files
+are preserved. Clearing repository mirrors means the next analysis must clone
+their complete history again.
+
+---
+
+# Diagnostics and Logging
+
+Run local health checks without contacting GitHub:
+
+```bash
+gitscope doctor
+```
+
+The doctor checks Python and Git availability, cache privacy and size, the
+versioned report contract, diagnostic-log permissions, token presence, and the
+repository allowlist. Token values, cached payloads, and private repository
+names are never printed.
+
+GitScope writes a private rotating diagnostic log to:
+
+```text
+.gitscope/logs/gitscope.log
+```
+
+Enable sanitized debug messages in the terminal by placing `--verbose` before
+the command:
+
+```bash
+gitscope --verbose analyze --org josys-src --user octocat
+gitscope --verbose doctor
+```
+
+Known credentials, GitHub token patterns, authorization headers, and URL
+passwords are redacted from both file and terminal logs.
 
 ---
 
@@ -598,18 +652,19 @@ Completed:
    * selective and complete regeneration from an existing `report.json`
    * `gitscope export html|markdown|csv|charts|all`
    * clearer contribution and output summaries in the terminal
+* **Logging, Cache Management, and Diagnostics**
+   * private rotating logs with credential redaction
+   * `gitscope cache status|path|clear`
+   * local-only `gitscope doctor` health checks
+   * global sanitized `--verbose` troubleshooting
 
 Remaining milestones for the first public release:
 
-1. **Logging, Cache Management, and Diagnostics**
-   * sanitized diagnostic logging
-   * cache inspection and lifecycle commands
-   * verbose troubleshooting mode
-2. **CI, Documentation, and Release Readiness**
+1. **CI, Documentation, and Release Readiness**
    * automated tests, linting, typing, and package builds
    * installation, contribution, security, and architecture documentation
    * installed-wheel verification
-3. **GitScope 0.1.0 Release**
+2. **GitScope 0.1.0 Release**
    * final package metadata and version verification
    * `uv tool install` readiness
    * first public release

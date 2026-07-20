@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -40,23 +41,24 @@ def test_resume_generates_offline_portfolio(tmp_path: Path) -> None:
 
     report_path = tmp_path / "report.json"
     report_path.write_text(empty_report().model_dump_json(), encoding="utf-8")
-    result = runner.invoke(
-        app,
-        [
-            "resume",
-            "--report",
-            str(report_path),
-            "--name",
-            "Manvendra Singh",
-            "--title",
-            "Staff Engineer",
-            "--company",
-            "Josys",
-            "--site",
-            "https://www.manvendrask.com/about",
-        ],
-        env={"GITHUB_TOKEN": ""},
-    )
+    with patch("gitscope.cli.logger.info") as log_info:
+        result = runner.invoke(
+            app,
+            [
+                "resume",
+                "--report",
+                str(report_path),
+                "--name",
+                "Manvendra Singh",
+                "--title",
+                "Staff Engineer",
+                "--company",
+                "Josys",
+                "--site",
+                "https://www.manvendrask.com/about",
+            ],
+            env={"GITHUB_TOKEN": ""},
+        )
 
     assert result.exit_code == 0
     assert "Manvendra Singh" in result.stdout
@@ -65,13 +67,30 @@ def test_resume_generates_offline_portfolio(tmp_path: Path) -> None:
     assert "resume.html" in result.stdout
     assert (tmp_path / "resume.md").exists()
     assert (tmp_path / "resume.html").exists()
+    log_info.assert_called_once_with("Resume generation completed: outputs=2")
 
 
 def test_resume_reports_missing_json(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["resume", "--report", str(tmp_path / "missing.json")])
+    with patch("gitscope.cli.logger.warning") as log_warning:
+        result = runner.invoke(app, ["resume", "--report", str(tmp_path / "missing.json")])
 
     assert result.exit_code == 2
     assert "Resume error" in result.stderr
+    log_warning.assert_called_once_with("Resume generation failed: %s", "ResumeError")
+
+
+def test_cache_path_logs_display_without_exposing_path(tmp_path: Path) -> None:
+    cache_directory = tmp_path / "private-cache"
+
+    with patch("gitscope.cli.logger.info") as log_info:
+        result = runner.invoke(
+            app,
+            ["cache", "path", "--cache-dir", str(cache_directory)],
+        )
+
+    assert result.exit_code == 0
+    assert cache_directory.name in result.stdout
+    log_info.assert_called_once_with("Cache path displayed")
 
 
 def test_export_html_regenerates_dashboard_without_credentials(tmp_path: Path) -> None:
@@ -111,6 +130,78 @@ def test_export_reports_missing_json(tmp_path: Path) -> None:
 
     assert result.exit_code == 2
     assert "Export error" in result.stderr
+
+
+def test_cache_status_and_clear_are_scoped(tmp_path: Path) -> None:
+    cache_directory = tmp_path / "cache"
+    graphql = cache_directory / "graphql"
+    repository = cache_directory / "repositories" / "org" / "repo.git"
+    graphql.mkdir(parents=True)
+    repository.mkdir(parents=True)
+    (graphql / "entry.json").write_text("payload", encoding="utf-8")
+    (repository / "HEAD").write_text("ref", encoding="utf-8")
+
+    status_result = runner.invoke(
+        app,
+        ["cache", "status", "--cache-dir", str(cache_directory)],
+    )
+    clear_result = runner.invoke(
+        app,
+        ["cache", "clear", "graphql", "--cache-dir", str(cache_directory), "--yes"],
+    )
+
+    assert status_result.exit_code == 0
+    assert "GitScope cache" in status_result.stdout
+    assert "repository names are not displayed" in status_result.stdout
+    assert clear_result.exit_code == 0
+    assert "Cleared graphql" in clear_result.stdout
+    assert not graphql.exists()
+    assert repository.exists()
+
+
+def test_cache_clear_can_be_cancelled(tmp_path: Path) -> None:
+    cache_directory = tmp_path / "cache"
+    graphql = cache_directory / "graphql"
+    graphql.mkdir(parents=True)
+
+    result = runner.invoke(
+        app,
+        ["cache", "clear", "graphql", "--cache-dir", str(cache_directory)],
+        input="n\n",
+    )
+
+    assert result.exit_code == 0
+    assert "cancelled" in result.stdout
+    assert graphql.exists()
+
+
+def test_doctor_reports_local_state_without_requiring_token(tmp_path: Path) -> None:
+    from tests.report.test_json import empty_report
+
+    report_path = tmp_path / "report.json"
+    report_path.write_text(empty_report().model_dump_json(), encoding="utf-8")
+    repositories_file = tmp_path / "repositories"
+    repositories_file.write_text("org/private-repo\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "doctor",
+            "--report",
+            str(report_path),
+            "--repos-file",
+            str(repositories_file),
+            "--cache-dir",
+            str(tmp_path / "cache"),
+        ],
+        env={"GITHUB_TOKEN": ""},
+    )
+
+    assert result.exit_code == 0
+    assert "GitScope doctor" in result.stdout
+    assert "GitHub token" in result.stdout
+    assert "token values and cache payloads are hidden" in result.stdout
+    assert "private-repo" not in result.stdout
 
 
 def test_analyze_requires_token() -> None:
