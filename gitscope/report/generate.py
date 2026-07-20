@@ -12,6 +12,7 @@ from gitscope.analytics.repositories import summarize_languages, summarize_repos
 from gitscope.analytics.reviews import summarize_reviews
 from gitscope.analytics.timeline import build_timeline
 from gitscope.cache import JsonCache
+from gitscope.charts import write_chart_bundle
 from gitscope.config import Settings
 from gitscope.git.collection import collect_git_contributions
 from gitscope.git.identities import DEFAULT_IDENTITIES_FILE, AuthorIdentities
@@ -38,6 +39,7 @@ class GeneratedCareerReport:
     report: CareerReport
     path: Path
     discovery_context: DiscoveryContext
+    chart_paths: tuple[Path, ...] = ()
 
 
 async def generate_career_report(
@@ -155,7 +157,13 @@ async def generate_career_report(
         commits=git_collection.commits,
     )
     path = write_json_report(report, settings.output_directory)
-    return GeneratedCareerReport(report=report, path=path, discovery_context=context)
+    chart_paths = write_chart_bundle(report, settings.output_directory / "charts")
+    return GeneratedCareerReport(
+        report=report,
+        path=path,
+        discovery_context=context,
+        chart_paths=chart_paths,
+    )
 
 
 def _discovery_stats(context: DiscoveryContext) -> CollectionStats:

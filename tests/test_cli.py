@@ -171,6 +171,7 @@ def test_analyze_generates_report(
     )
     assert "0 inferred languages" in result.stdout
     assert "0 days with 0 career milestones" in result.stdout
+    assert "Wrote 0 interactive charts" in result.stdout
     assert "4,999" in result.stdout
     assert "report.json" in result.stdout
 

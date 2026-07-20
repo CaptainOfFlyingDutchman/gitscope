@@ -50,3 +50,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 python_version = "3.13"
 strict = true
 packages = ["gitscope"]
+
+[[tool.mypy.overrides]]
+module = ["plotly", "plotly.*"]
+ignore_missing_imports = true

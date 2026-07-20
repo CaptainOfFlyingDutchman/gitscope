@@ -157,4 +157,7 @@ def analyze(
         console.print("GitHub contribution metadata loaded from cache.")
     if report.collection.warnings:
         console.print(f"[yellow]Warnings:[/yellow] {len(report.collection.warnings)}")
+    console.print(
+        f"[green]Wrote[/green] [bold]{len(generated.chart_paths)}[/bold] interactive charts."
+    )
     console.print(f"[green]Wrote[/green] [bold]{generated.path}[/bold].")
