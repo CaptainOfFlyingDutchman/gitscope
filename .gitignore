@@ -4,6 +4,7 @@
 !.env.example
 .venv/
 .gitscope/
+.gitscope-repositories
 career-report/
 __pycache__/
 *.py[cod]
@@ -15,4 +16,3 @@ htmlcov/
 dist/
 build/
 *.egg-info/
-

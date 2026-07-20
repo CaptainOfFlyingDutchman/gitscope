@@ -114,10 +114,12 @@ async def test_execute_uses_cache(tmp_path: Path) -> None:
 
         http = GitHubHTTPClient("secret", client=client)
         graphql = GitHubGraphQLClient(http, JsonCache(tmp_path))
-        await graphql.organization_repositories("josys-src")
-        await graphql.organization_repositories("josys-src")
+        first = await graphql.organization_repositories("josys-src")
+        second = await graphql.organization_repositories("josys-src")
 
     assert calls == 1
+    assert first.from_cache is False
+    assert second.from_cache is True
 
 
 @pytest.mark.anyio
@@ -144,3 +146,73 @@ async def test_repository_discovery_reports_invisible_organization() -> None:
         graphql = GitHubGraphQLClient(GitHubHTTPClient("secret", client=client))
         with pytest.raises(OrganizationNotFoundError, match="josys-src"):
             await graphql.organization_repositories("josys-src")
+
+
+@pytest.mark.anyio
+async def test_allowlisted_repositories_use_one_batched_query() -> None:
+    request_count = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
+        import json
+
+        body = json.loads(request.read())
+        assert body["variables"] == {
+            "owner": "josys-src",
+            "name0": "frontend",
+            "name1": "backend",
+        }
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "repo0": repository_node("frontend"),
+                    "repo1": repository_node("backend", private=True),
+                    "rateLimit": {
+                        "cost": 1,
+                        "remaining": 4998,
+                        "resetAt": "2026-07-20T12:00:00Z",
+                    },
+                }
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        from gitscope.github.http import GitHubHTTPClient
+
+        graphql = GitHubGraphQLClient(GitHubHTTPClient("secret", client=client))
+        result = await graphql.repositories_by_name(
+            "josys-src",
+            ("frontend", "backend"),
+        )
+
+    assert request_count == 1
+    assert [repository.name for repository in result.repositories] == ["frontend", "backend"]
+    assert result.source == "graphql-allowlist"
+
+
+@pytest.mark.anyio
+async def test_allowlisted_repositories_report_inaccessible_names() -> None:
+    transport = httpx.MockTransport(
+        lambda _request: httpx.Response(
+            200,
+            json={
+                "data": {
+                    "repo0": None,
+                    "rateLimit": {
+                        "cost": 1,
+                        "remaining": 4999,
+                        "resetAt": "2026-07-20T12:00:00Z",
+                    },
+                }
+            },
+        )
+    )
+    async with httpx.AsyncClient(transport=transport) as client:
+        from gitscope.github.errors import RepositoriesNotFoundError
+        from gitscope.github.http import GitHubHTTPClient
+
+        graphql = GitHubGraphQLClient(GitHubHTTPClient("secret", client=client))
+        with pytest.raises(RepositoriesNotFoundError, match="josys-src/missing"):
+            await graphql.repositories_by_name("josys-src", ("missing",))

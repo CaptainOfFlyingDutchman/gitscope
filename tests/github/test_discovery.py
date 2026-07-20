@@ -9,7 +9,7 @@ from httpx import Response
 
 from gitscope.config import Settings
 from gitscope.github.discovery import discover_repositories
-from tests.github.test_graphql import graphql_page, repository_node
+from tests.github.test_graphql import repository_node
 
 
 @pytest.mark.anyio
@@ -21,11 +21,16 @@ async def test_discovery_validates_user_and_lists_repositories(tmp_path: Path) -
     respx.post("https://api.github.com/graphql").mock(
         return_value=Response(
             200,
-            json=graphql_page(
-                [repository_node("private", private=True)],
-                has_next_page=False,
-                cursor=None,
-            ),
+            json={
+                "data": {
+                    "repo0": repository_node("private", private=True),
+                    "rateLimit": {
+                        "cost": 1,
+                        "remaining": 4999,
+                        "resetAt": "2026-07-20T12:00:00Z",
+                    },
+                }
+            },
         )
     )
     settings = Settings(
@@ -35,7 +40,7 @@ async def test_discovery_validates_user_and_lists_repositories(tmp_path: Path) -
         cache_directory=tmp_path,
     )
 
-    context = await discover_repositories(settings)
+    context = await discover_repositories(settings, ("private",))
 
     assert context.authenticated_user.login == "octocat"
     assert context.discovery.repositories[0].name == "private"

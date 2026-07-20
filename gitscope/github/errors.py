@@ -33,6 +33,15 @@ class OrganizationNotFoundError(GitHubError):
     """Raised when an organization is missing or invisible to the token."""
 
 
+class RepositoriesNotFoundError(GitHubError):
+    """Raised when allowlisted repositories are missing or inaccessible."""
+
+    def __init__(self, repositories: list[str]) -> None:
+        self.repositories = tuple(repositories)
+        names = ", ".join(repositories)
+        super().__init__(f"Listed repositories were not found or are inaccessible: {names}")
+
+
 class RateLimitError(GitHubError):
     """Raised when GitHub refuses a request because its rate limit is exhausted."""
 

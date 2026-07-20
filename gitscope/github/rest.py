@@ -7,7 +7,11 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from gitscope.github.errors import InvalidGitHubResponseError
+from gitscope.github.errors import (
+    GitHubAPIError,
+    InvalidGitHubResponseError,
+    RepositoriesNotFoundError,
+)
 from gitscope.github.http import GitHubHTTPClient
 from gitscope.github.models import (
     AuthenticatedUser,
@@ -50,6 +54,30 @@ class GitHubRESTClient:
             if len(payload) < 100:
                 break
             page += 1
+        return tuple(repositories)
+
+    async def repositories_by_name(
+        self,
+        organization: str,
+        repository_names: tuple[str, ...],
+    ) -> tuple[RepositorySummary, ...]:
+        """Fetch only explicitly allowlisted repositories through REST."""
+        repositories: list[RepositorySummary] = []
+        unavailable: list[str] = []
+        for name in repository_names:
+            try:
+                payload, _headers = await self.http.request_json(
+                    "GET",
+                    f"{REST_API_URL}/repos/{organization}/{name}",
+                )
+            except GitHubAPIError as exc:
+                if exc.status_code == 404:
+                    unavailable.append(f"{organization}/{name}")
+                    continue
+                raise
+            repositories.append(self._repository_from_rest(payload))
+        if unavailable:
+            raise RepositoriesNotFoundError(unavailable)
         return tuple(repositories)
 
     @staticmethod

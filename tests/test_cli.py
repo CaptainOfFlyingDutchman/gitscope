@@ -1,6 +1,7 @@
 """Tests for the GitScope CLI."""
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -33,13 +34,18 @@ def test_analyze_requires_token() -> None:
     assert "GITHUB_TOKEN is not configured" in result.stderr
 
 
-def test_analyze_discovers_repositories(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_analyze_discovers_repositories(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     async def fake_discovery(
         settings: Settings,
+        repository_names: tuple[str, ...],
         *,
         refresh: bool = False,
     ) -> DiscoveryContext:
         assert settings.organization == "josys-src"
+        assert repository_names == ("frontend",)
         assert refresh is True
         return DiscoveryContext(
             authenticated_user=AuthenticatedUser(login="octocat", id=1),
@@ -55,6 +61,8 @@ def test_analyze_discovers_repositories(monkeypatch: pytest.MonkeyPatch) -> None
         )
 
     monkeypatch.setattr("gitscope.cli.discover_repositories", fake_discovery)
+    repositories_file = tmp_path / "repositories"
+    repositories_file.write_text("josys-src/frontend\n", encoding="utf-8")
     result = runner.invoke(
         app,
         [
@@ -64,19 +72,25 @@ def test_analyze_discovers_repositories(monkeypatch: pytest.MonkeyPatch) -> None
             "--user",
             "CaptainOfFlyingDutchman",
             "--refresh",
+            "--repos-file",
+            str(repositories_file),
         ],
         env={"GITHUB_TOKEN": "secret-token"},
     )
 
     assert result.exit_code == 0
     assert "Authenticated as octocat" in result.stdout
-    assert "Found 0 visible repositories in josys-src" in result.stdout
+    assert "Validated 0 allowlisted repositories in josys-src" in result.stdout
     assert "4,999" in result.stdout
 
 
-def test_analyze_reports_github_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_analyze_reports_github_error(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     async def rejected_discovery(
         _settings: Settings,
+        _repository_names: tuple[str, ...],
         *,
         refresh: bool = False,
     ) -> DiscoveryContext:
@@ -84,11 +98,40 @@ def test_analyze_reports_github_error(monkeypatch: pytest.MonkeyPatch) -> None:
         raise AuthenticationError("token rejected")
 
     monkeypatch.setattr("gitscope.cli.discover_repositories", rejected_discovery)
+    repositories_file = tmp_path / "repositories"
+    repositories_file.write_text("josys-src/frontend\n", encoding="utf-8")
     result = runner.invoke(
         app,
-        ["analyze", "--org", "josys-src", "--user", "CaptainOfFlyingDutchman"],
+        [
+            "analyze",
+            "--org",
+            "josys-src",
+            "--user",
+            "CaptainOfFlyingDutchman",
+            "--repos-file",
+            str(repositories_file),
+        ],
         env={"GITHUB_TOKEN": "secret-token"},
     )
 
     assert result.exit_code == 1
     assert "GitHub error: token rejected" in result.stderr
+
+
+def test_analyze_requires_repository_file(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--org",
+            "josys-src",
+            "--user",
+            "CaptainOfFlyingDutchman",
+            "--repos-file",
+            str(tmp_path / "missing"),
+        ],
+        env={"GITHUB_TOKEN": "secret-token"},
+    )
+
+    assert result.exit_code == 2
+    assert "Repository list error" in result.stderr

@@ -32,3 +32,26 @@ async def test_graphql_query_error_falls_back_to_rest() -> None:
     assert requests == ["/graphql", "/orgs/josys-src/repos"]
     assert result.source == "rest"
     assert [repository.name for repository in result.repositories] == ["fallback"]
+
+
+@pytest.mark.anyio
+async def test_allowlist_fallback_never_lists_entire_organization() -> None:
+    paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        if request.url.path == "/graphql":
+            return httpx.Response(
+                200,
+                json={"errors": [{"message": "query unavailable"}]},
+                request=request,
+            )
+        return httpx.Response(200, json=rest_repository("frontend"), request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        http = GitHubHTTPClient("secret", client=client)
+        service = GitHubService(GitHubGraphQLClient(http), GitHubRESTClient(http))
+        result = await service.repositories_by_name("josys-src", ("frontend",))
+
+    assert paths == ["/graphql", "/repos/josys-src/frontend"]
+    assert result.source == "rest-allowlist"

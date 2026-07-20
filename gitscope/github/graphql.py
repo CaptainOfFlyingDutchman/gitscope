@@ -14,6 +14,7 @@ from gitscope.github.errors import (
     InvalidGitHubResponseError,
     OrganizationNotFoundError,
     RateLimitError,
+    RepositoriesNotFoundError,
 )
 from gitscope.github.http import GitHubHTTPClient
 from gitscope.github.models import (
@@ -24,28 +25,36 @@ from gitscope.github.models import (
 )
 
 GRAPHQL_API_URL = "https://api.github.com/graphql"
+SCOPED_REPOSITORY_BATCH_SIZE = 50
 
-ORGANIZATION_REPOSITORIES_QUERY = """
+REPOSITORY_FIELDS = """
+  id
+  name
+  nameWithOwner
+  url
+  visibility
+  isPrivate
+  isArchived
+  isFork
+  defaultBranchRef { name }
+  primaryLanguage { name }
+  stargazerCount
+  forkCount
+  diskUsage
+  createdAt
+  updatedAt
+  pushedAt
+"""
+
+ORGANIZATION_REPOSITORIES_QUERY = (
+    """
 query OrganizationRepositories($login: String!, $cursor: String) {
   organization(login: $login) {
     repositories(first: 100, after: $cursor, orderBy: {field: NAME, direction: ASC}) {
       nodes {
-        id
-        name
-        nameWithOwner
-        url
-        visibility
-        isPrivate
-        isArchived
-        isFork
-        defaultBranchRef { name }
-        primaryLanguage { name }
-        stargazerCount
-        forkCount
-        diskUsage
-        createdAt
-        updatedAt
-        pushedAt
+        """
+    + REPOSITORY_FIELDS
+    + """
       }
       pageInfo { hasNextPage endCursor }
     }
@@ -53,6 +62,7 @@ query OrganizationRepositories($login: String!, $cursor: String) {
   rateLimit { cost remaining resetAt }
 }
 """
+)
 
 
 class _GraphQLModel(BaseModel):
@@ -134,13 +144,13 @@ class GitHubGraphQLClient:
         variables: dict[str, Any],
         *,
         refresh: bool = False,
-    ) -> dict[str, Any]:
+    ) -> tuple[dict[str, Any], bool]:
         """Execute one query, honoring the private response cache."""
         key = JsonCache.key_for("graphql", {"query": query, "variables": variables})
         if self.cache and not refresh:
             cached = self.cache.get(key)
             if cached is not None:
-                return cached
+                return cached, True
 
         payload, headers = await self.http.request_json(
             "POST",
@@ -163,7 +173,7 @@ class GitHubGraphQLClient:
         if self.cache:
             with suppress(OSError):
                 self.cache.set(key, data)
-        return data
+        return data, False
 
     async def organization_repositories(
         self,
@@ -175,13 +185,15 @@ class GitHubGraphQLClient:
         repositories: list[RepositorySummary] = []
         cursor: str | None = None
         latest_rate_limit: RateLimit | None = None
+        all_pages_cached = True
 
         while True:
-            data = await self.execute(
+            data, from_cache = await self.execute(
                 ORGANIZATION_REPOSITORIES_QUERY,
                 {"login": organization, "cursor": cursor},
                 refresh=refresh,
             )
+            all_pages_cached = all_pages_cached and from_cache
             try:
                 page = _RepositoriesPage.model_validate(data)
             except ValidationError as exc:
@@ -208,7 +220,73 @@ class GitHubGraphQLClient:
             repositories=tuple(repositories),
             source="graphql",
             rate_limit=latest_rate_limit,
+            from_cache=all_pages_cached,
         )
+
+    async def repositories_by_name(
+        self,
+        organization: str,
+        repository_names: tuple[str, ...],
+        *,
+        refresh: bool = False,
+    ) -> RepositoryDiscovery:
+        """Fetch only allowlisted repositories using batched root-field aliases."""
+        repositories: list[RepositorySummary] = []
+        unavailable: list[str] = []
+        latest_rate_limit: RateLimit | None = None
+        all_batches_cached = True
+
+        for start in range(0, len(repository_names), SCOPED_REPOSITORY_BATCH_SIZE):
+            batch = repository_names[start : start + SCOPED_REPOSITORY_BATCH_SIZE]
+            query, variables = self._scoped_repositories_query(organization, batch)
+            data, from_cache = await self.execute(query, variables, refresh=refresh)
+            all_batches_cached = all_batches_cached and from_cache
+            try:
+                latest_rate_limit = RateLimit.model_validate(data.get("rateLimit"))
+                for index, name in enumerate(batch):
+                    repository_data = data.get(f"repo{index}")
+                    if repository_data is None:
+                        unavailable.append(f"{organization}/{name}")
+                        continue
+                    repositories.append(
+                        _RepositoryNode.model_validate(repository_data).to_summary()
+                    )
+            except ValidationError as exc:
+                raise InvalidGitHubResponseError(
+                    "GitHub returned invalid allowlisted repository data."
+                ) from exc
+
+        if unavailable:
+            raise RepositoriesNotFoundError(unavailable)
+        return RepositoryDiscovery(
+            repositories=tuple(repositories),
+            source="graphql-allowlist",
+            rate_limit=latest_rate_limit,
+            from_cache=all_batches_cached,
+        )
+
+    @staticmethod
+    def _scoped_repositories_query(
+        organization: str,
+        repository_names: tuple[str, ...],
+    ) -> tuple[str, dict[str, Any]]:
+        definitions = ["$owner: String!"]
+        fields: list[str] = []
+        variables: dict[str, Any] = {"owner": organization}
+        for index, name in enumerate(repository_names):
+            definitions.append(f"$name{index}: String!")
+            fields.append(
+                f"repo{index}: repository(owner: $owner, name: $name{index}) "
+                f"{{ {REPOSITORY_FIELDS} }}"
+            )
+            variables[f"name{index}"] = name
+        query = (
+            f"query ScopedRepositories({', '.join(definitions)}) {{\n"
+            f"{'\n'.join(fields)}\n"
+            "rateLimit { cost remaining resetAt }\n"
+            "}"
+        )
+        return query, variables
 
     @staticmethod
     def _error_messages(errors: Any) -> str:

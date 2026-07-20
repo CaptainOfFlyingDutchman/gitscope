@@ -66,3 +66,4 @@ class RepositoryDiscovery(GitHubModel):
     repositories: tuple[RepositorySummary, ...]
     source: str
     rate_limit: RateLimit | None = None
+    from_cache: bool = False

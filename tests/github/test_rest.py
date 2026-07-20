@@ -82,3 +82,23 @@ async def test_repository_discovery_rejects_invalid_collection() -> None:
         rest = GitHubRESTClient(GitHubHTTPClient("secret", client=client))
         with pytest.raises(InvalidGitHubResponseError):
             await rest.organization_repositories("josys-src")
+
+
+@pytest.mark.anyio
+async def test_allowlisted_rest_discovery_fetches_only_requested_names() -> None:
+    paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        name = request.url.path.rsplit("/", maxsplit=1)[-1]
+        return httpx.Response(200, json=rest_repository(name), request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        rest = GitHubRESTClient(GitHubHTTPClient("secret", client=client))
+        repositories = await rest.repositories_by_name(
+            "josys-src",
+            ("frontend", "backend"),
+        )
+
+    assert paths == ["/repos/josys-src/frontend", "/repos/josys-src/backend"]
+    assert [repository.name for repository in repositories] == ["frontend", "backend"]

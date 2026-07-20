@@ -34,3 +34,21 @@ class GitHubService:
         except GraphQLQueryError:
             repositories = await self.rest.organization_repositories(organization)
             return RepositoryDiscovery(repositories=repositories, source="rest")
+
+    async def repositories_by_name(
+        self,
+        organization: str,
+        repository_names: tuple[str, ...],
+        *,
+        refresh: bool = False,
+    ) -> RepositoryDiscovery:
+        """Discover only allowlisted repositories, never the entire organization."""
+        try:
+            return await self.graphql.repositories_by_name(
+                organization,
+                repository_names,
+                refresh=refresh,
+            )
+        except GraphQLQueryError:
+            repositories = await self.rest.repositories_by_name(organization, repository_names)
+            return RepositoryDiscovery(repositories=repositories, source="rest-allowlist")
