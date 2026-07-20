@@ -166,4 +166,6 @@ def analyze(
         console.print(
             f"[green]Wrote[/green] Markdown report [bold]{generated.markdown_path}[/bold]."
         )
+    if generated.csv_path is not None:
+        console.print(f"[green]Wrote[/green] CSV export [bold]{generated.csv_path}[/bold].")
     console.print(f"[green]Wrote[/green] [bold]{generated.path}[/bold].")

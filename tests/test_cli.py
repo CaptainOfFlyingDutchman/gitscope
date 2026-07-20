@@ -145,6 +145,7 @@ def test_analyze_generates_report(
             discovery_context=context,
             html_path=tmp_path / "report.html",
             markdown_path=tmp_path / "report.md",
+            csv_path=tmp_path / "report.csv",
         )
 
     monkeypatch.setattr("gitscope.cli.generate_career_report", fake_generation)
@@ -178,6 +179,8 @@ def test_analyze_generates_report(
     assert "report.html" in result.stdout
     assert "Markdown report" in result.stdout
     assert "report.md" in result.stdout
+    assert "CSV export" in result.stdout
+    assert "report.csv" in result.stdout
     assert "4,999" in result.stdout
     assert "report.json" in result.stdout
 
