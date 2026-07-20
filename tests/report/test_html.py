@@ -88,6 +88,8 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
     assert "localStorage" in theme_script
     assert "Plotly.relayout" in theme_script
     assert "Repository Contribution Rankings" in html
+    assert "Pull Request Merge Times" in html
+    assert "Largest changes" in html
     assert 'class="chart-card chart-card--wide"' in html
     commit_pattern_card = html.split('aria-label="Authored commit patterns', maxsplit=1)[0]
     assert commit_pattern_card.endswith('class="chart-card chart-card--wide" ')
@@ -97,4 +99,4 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
     assert yearly_position < extensions_position < commit_patterns_position
     assert 'src="charts/plotly.min.js"' in html
     assert "https://cdn.plot.ly" not in html
-    assert html.count("plotly-graph-div") == 10
+    assert html.count("plotly-graph-div") == 12

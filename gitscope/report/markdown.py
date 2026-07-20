@@ -154,6 +154,55 @@ def _render_markdown(report: CareerReport) -> list[str]:
             f"- **Open:** {pull_requests.open:,}",
             f"- **Closed without merge:** {pull_requests.closed:,}",
             f"- **Drafts:** {pull_requests.drafts:,}",
+            "- **Average merge time:** "
+            f"{_format_optional_duration(pull_requests.average_merge_time_hours)}",
+            "- **Median merge time:** "
+            f"{_format_optional_duration(pull_requests.median_merge_time_hours)}",
+            "",
+            "### Largest pull requests by changed lines",
+            "",
+        ]
+    )
+    lines.extend(
+        _table(
+            ("Pull request", "Repository", "State", "Changed lines", "Files"),
+            tuple(
+                (
+                    f"[#{item.number}]({item.url}) {_escape_table_title(item.title)}",
+                    f"{item.repository}#{item.number}",
+                    item.state.value.title(),
+                    f"{item.additions + item.deletions:,}",
+                    f"{item.changed_files:,}",
+                )
+                for item in pull_requests.largest_by_changes
+            ),
+            empty="No authored pull requests were collected.",
+        )
+    )
+    lines.extend(
+        [
+            "",
+            "### Longest-running pull requests",
+            "",
+        ]
+    )
+    lines.extend(
+        _table(
+            ("Pull request", "Repository", "State", "Elapsed"),
+            tuple(
+                (
+                    f"[#{item.number}]({item.url}) {_escape_table_title(item.title)}",
+                    f"{item.repository}#{item.number}",
+                    item.state.value.title(),
+                    _format_duration(item.duration_hours),
+                )
+                for item in pull_requests.longest_running
+            ),
+            empty="No authored pull requests were collected.",
+        )
+    )
+    lines.extend(
+        [
             "",
             "## Review outcomes",
             "",
@@ -236,6 +285,16 @@ def _format_optional_date(value: date | datetime | None) -> str:
     return _format_date(value) if value is not None else "Not available"
 
 
+def _format_optional_duration(value: float | None) -> str:
+    return _format_duration(value) if value is not None else "Not available"
+
+
+def _format_duration(hours: float) -> str:
+    if hours < 24:
+        return f"{hours:.1f} hours"
+    return f"{hours / 24:.1f} days"
+
+
 def _format_date(value: date | datetime) -> str:
     return f"{value:%b} {value.day}, {value:%Y}"
 
@@ -250,6 +309,10 @@ def _escape_text(value: str) -> str:
 
 def _escape_link_text(value: str) -> str:
     return _escape_text(value).replace("[", "\\[").replace("]", "\\]")
+
+
+def _escape_table_title(value: str) -> str:
+    return value.replace("[", "&#91;").replace("]", "&#93;")
 
 
 def _escape_code(value: str) -> str:

@@ -74,9 +74,9 @@ async def test_generate_career_report_builds_and_writes_schema(
     assert generated.markdown_path.exists()
     assert generated.csv_path == tmp_path / "career-report" / "report.csv"
     assert generated.csv_path.exists()
-    assert len(generated.chart_paths) == 10
+    assert len(generated.chart_paths) == 12
     assert all(path.exists() for path in generated.chart_paths)
-    assert generated.report.schema_version == "1.3"
+    assert generated.report.schema_version == "1.4"
     assert generated.report.collection.github_api_requests == 4
     assert generated.report.collection.git_repositories_processed == 1
     assert generated.report.commit_summary.total == 0

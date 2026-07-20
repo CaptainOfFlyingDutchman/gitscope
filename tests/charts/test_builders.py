@@ -9,9 +9,14 @@ from gitscope.charts.activity import (
 )
 from gitscope.charts.commits import commit_patterns_chart
 from gitscope.charts.languages import contributed_languages_chart, file_extensions_chart
+from gitscope.charts.pull_requests import (
+    pull_request_merge_times_chart,
+    pull_request_repository_activity_chart,
+)
 from gitscope.charts.repositories import repository_rankings_chart
 from gitscope.charts.reviews import review_activity_chart, review_states_chart
 from gitscope.charts.timeline import career_milestones_chart
+from gitscope.models.pull_request import PullRequest, PullRequestState
 from gitscope.models.report import (
     ActivityPeriod,
     CareerMilestone,
@@ -88,6 +93,7 @@ def test_chart_builders_preserve_report_values() -> None:
         merged=2,
         drafts=1,
         merge_rate=1.0,
+        by_repository={"org/repo": 3},
     )
     reviews = ReviewSummary(
         total=7,
@@ -116,6 +122,24 @@ def test_chart_builders_preserve_report_values() -> None:
     language_figure = contributed_languages_chart(languages)
     extension_figure = file_extensions_chart(languages)
     milestone_figure = career_milestones_chart(timeline)
+    pull_request = PullRequest(
+        node_id="PR_1",
+        repository="org/repo",
+        number=1,
+        title="PR",
+        url="https://github.com/org/repo/pull/1",
+        state=PullRequestState.MERGED,
+        is_draft=False,
+        created_at=occurred_at,
+        updated_at=occurred_at,
+        merged_at=occurred_at,
+        additions=1,
+        deletions=1,
+        changed_files=1,
+        commit_count=1,
+    )
+    merge_time_figure = pull_request_merge_times_chart((pull_request,))
+    pull_request_repository_figure = pull_request_repository_activity_chart(pull_requests)
 
     assert list(monthly_figure.data[0].y) == [12]
     assert len(yearly_figure.data) == 3
@@ -127,3 +151,5 @@ def test_chart_builders_preserve_report_values() -> None:
     assert len(language_figure.data) == 2
     assert list(extension_figure.data[0].x) == [8]
     assert list(milestone_figure.data[0].text) == ["First authored commit"]
+    assert sum(merge_time_figure.data[0].y) == 1
+    assert list(pull_request_repository_figure.data[0].x) == [3]

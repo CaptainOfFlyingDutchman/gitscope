@@ -21,6 +21,8 @@ _DASHBOARD_CHART_ORDER = (
     "file-extensions",
     "commit-patterns",
     "repository-rankings",
+    "pull-request-merge-times",
+    "pull-request-repositories",
     "pull-request-states",
     "review-activity",
     "review-states",
@@ -32,6 +34,8 @@ _CHART_DESCRIPTIONS = {
     "yearly-activity": "Year-over-year comparison of contribution activity.",
     "commit-patterns": "Authored commit patterns by weekday and author-local hour.",
     "repository-rankings": "The repositories with the most commits, pull requests, and reviews.",
+    "pull-request-merge-times": "How long merged pull requests remained open before merging.",
+    "pull-request-repositories": "Repositories ranked by authored pull-request activity.",
     "pull-request-states": "Authored pull requests grouped by their current outcome.",
     "review-activity": "Submitted review activity over time.",
     "review-states": "Submitted reviews grouped by review state.",
@@ -91,6 +95,7 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
     )
     environment.filters["number"] = lambda value: f"{value:,}"
     environment.filters["date"] = _format_date
+    environment.filters["duration"] = _format_duration
 
     figures = dict(build_chart_figures(report))
     charts = tuple(
@@ -201,6 +206,12 @@ def _heatmap_level(value: int, thresholds: tuple[int, int, int]) -> int:
 def _format_date(value: date | datetime) -> str:
     formatted = value.strftime("%b")
     return f"{formatted} {value.day}, {value:%Y}"
+
+
+def _format_duration(hours: float) -> str:
+    if hours < 24:
+        return f"{hours:.1f} hours"
+    return f"{hours / 24:.1f} days"
 
 
 def _write_private_text(path: Path, content: str) -> None:

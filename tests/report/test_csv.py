@@ -63,7 +63,7 @@ def test_write_csv_report_normalizes_activity_and_neutralizes_formulas(tmp_path:
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert [row["record_type"] for row in rows] == ["commit", "pull_request", "review"]
-    assert all(row["schema_version"] == "1.3" for row in rows)
+    assert all(row["schema_version"] == "1.4" for row in rows)
     assert rows[0]["additions"] == "10"
     assert rows[0]["is_merge"] == "false"
     assert rows[1]["title"].startswith("'=HYPERLINK")

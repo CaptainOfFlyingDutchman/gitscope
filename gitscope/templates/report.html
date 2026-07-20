@@ -48,6 +48,9 @@
         <article class="metric"><span>Repositories</span><strong>{{ report.collection.repository_count | number }}</strong><small>{{ report.collection.git_repositories_processed | number }} analyzed locally</small></article>
         <article class="metric"><span>Active days</span><strong>{{ report.timeline.active_days | number }}</strong><small>{{ report.timeline.career_span_days | number }}-day span</small></article>
         <article class="metric"><span>Changed lines</span><strong>{{ (report.commit_summary.additions + report.commit_summary.deletions) | number }}</strong><small>+{{ report.commit_summary.additions | number }} / −{{ report.commit_summary.deletions | number }}</small></article>
+        <article class="metric metric--prs"><span>Average merge time</span><strong>{% if report.pull_request_summary.average_merge_time_hours is not none %}{{ report.pull_request_summary.average_merge_time_hours | duration }}{% else %}—{% endif %}</strong><small>Creation to merge</small></article>
+        <article class="metric metric--prs"><span>Median merge time</span><strong>{% if report.pull_request_summary.median_merge_time_hours is not none %}{{ report.pull_request_summary.median_merge_time_hours | duration }}{% else %}—{% endif %}</strong><small>Less affected by outliers</small></article>
+        <article class="metric metric--prs"><span>Oldest open PR</span><strong>{% if report.pull_request_summary.oldest_open %}{{ report.pull_request_summary.oldest_open[0].duration_hours | duration }}{% else %}—{% endif %}</strong><small>{% if report.pull_request_summary.oldest_open %}#{{ report.pull_request_summary.oldest_open[0].number }} in {{ report.pull_request_summary.oldest_open[0].repository }}{% else %}No open PRs{% endif %}</small></article>
       </div>
     </section>
 
@@ -76,6 +79,20 @@
           {{ chart.html | safe }}
         </article>
         {% endfor %}
+      </div>
+    </section>
+
+    <section aria-labelledby="pr-depth-title">
+      <div class="section-heading"><div><p class="eyebrow">Pull request depth</p><h2 id="pr-depth-title">Scale and lifecycle</h2></div><p>Rankings provide context about change size and elapsed lifecycle time.</p></div>
+      <div class="insight-grid">
+        <div class="table-card"><div class="table-title"><h3>Largest changes</h3><p>Ranked by additions plus deletions.</p></div><div class="table-scroll" tabindex="0"><table>
+          <thead><tr><th>Pull request</th><th>Repository</th><th class="numeric">Lines</th><th class="numeric">Files</th></tr></thead>
+          <tbody>{% for pull_request in report.pull_request_summary.largest_by_changes %}<tr><th scope="row"><a href="{{ pull_request.url }}" target="_blank" rel="noopener noreferrer">#{{ pull_request.number }} {{ pull_request.title }}</a></th><td>{{ pull_request.repository }}</td><td class="numeric">{{ (pull_request.additions + pull_request.deletions) | number }}</td><td class="numeric">{{ pull_request.changed_files | number }}</td></tr>{% else %}<tr><td colspan="4" class="empty-state">No authored pull requests were collected.</td></tr>{% endfor %}</tbody>
+        </table></div></div>
+        <div class="table-card"><div class="table-title"><h3>Longest-running pull requests</h3><p>Open age or elapsed time before completion.</p></div><div class="table-scroll" tabindex="0"><table>
+          <thead><tr><th>Pull request</th><th>Repository</th><th>State</th><th class="numeric">Elapsed</th></tr></thead>
+          <tbody>{% for pull_request in report.pull_request_summary.longest_running %}<tr><th scope="row"><a href="{{ pull_request.url }}" target="_blank" rel="noopener noreferrer">#{{ pull_request.number }} {{ pull_request.title }}</a></th><td>{{ pull_request.repository }}</td><td><span class="state state--{{ pull_request.state.value | lower }}">{{ pull_request.state.value | title }}</span></td><td class="numeric">{{ pull_request.duration_hours | duration }}</td></tr>{% else %}<tr><td colspan="4" class="empty-state">No authored pull requests were collected.</td></tr>{% endfor %}</tbody>
+        </table></div></div>
       </div>
     </section>
 

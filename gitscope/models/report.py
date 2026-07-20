@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from gitscope.models.commit import CommitContribution
-from gitscope.models.pull_request import PullRequest
+from gitscope.models.pull_request import PullRequest, PullRequestState
 from gitscope.models.repository import RepositoryVisibility
 from gitscope.models.review import PullRequestReview
 
@@ -40,6 +40,24 @@ class ReportRepository(ReportModel):
     forks: int
 
 
+class PullRequestInsight(ReportModel):
+    """A ranked pull request with enough context to explain its placement."""
+
+    repository: str
+    number: int
+    title: str
+    url: str
+    state: PullRequestState
+    is_draft: bool
+    created_at: datetime
+    completed_at: datetime | None
+    duration_hours: float
+    additions: int
+    deletions: int
+    changed_files: int
+    commit_count: int
+
+
 class PullRequestSummary(ReportModel):
     """Aggregate pull-request metrics."""
 
@@ -49,6 +67,13 @@ class PullRequestSummary(ReportModel):
     merged: int
     drafts: int
     merge_rate: float | None
+    average_merge_time_hours: float | None = None
+    median_merge_time_hours: float | None = None
+    by_repository: dict[str, int] = {}
+    largest_by_changes: tuple[PullRequestInsight, ...] = ()
+    largest_by_files: tuple[PullRequestInsight, ...] = ()
+    longest_running: tuple[PullRequestInsight, ...] = ()
+    oldest_open: tuple[PullRequestInsight, ...] = ()
 
 
 class ReviewSummary(ReportModel):
@@ -164,7 +189,7 @@ class CollectionMetadata(ReportModel):
 class CareerReport(ReportModel):
     """Stable, versioned JSON representation of collected GitScope data."""
 
-    schema_version: Literal["1.3"] = "1.3"
+    schema_version: Literal["1.3", "1.4"] = "1.4"
     organization: str
     identity: ReportIdentity
     collection: CollectionMetadata

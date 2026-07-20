@@ -109,6 +109,10 @@ h1 { margin: 0; font-size: clamp(2.6rem, 7vw, 5.8rem); line-height: .98; letter-
 .chart-card { min-width: 0; overflow: hidden; }
 .chart-card--wide { grid-column: 1 / -1; }
 .chart-description { margin: 0; padding: 18px 22px 0; color: var(--muted); font-size: .83rem; }
+.insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.table-title { padding: 20px 22px 14px; border-bottom: 1px solid var(--line); }
+.table-title h3 { margin: 0; font-size: 1.05rem; }
+.table-title p { margin: 4px 0 0; color: var(--muted); font-size: .8rem; }
 .table-card { overflow: hidden; }
 table { width: 100%; border-collapse: collapse; white-space: nowrap; }
 th, td { padding: 15px 18px; border-bottom: 1px solid var(--line); text-align: left; }
@@ -139,6 +143,7 @@ html[data-theme="dark"] .modebar-btn path { fill: #a9b5c7 !important; }
 @media (max-width: 900px) {
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chart-layout { grid-template-columns: 1fr; }
+  .insight-grid { grid-template-columns: 1fr; }
   .chart-card--wide { grid-column: auto; }
   .section-heading, .panel-heading { align-items: start; flex-direction: column; gap: 10px; }
   .section-heading > p, .panel-heading > p { text-align: left; }

@@ -12,7 +12,7 @@ def test_write_chart_bundle_creates_private_offline_pages(tmp_path: Path) -> Non
 
     paths = write_chart_bundle(empty_report(), output_directory)
 
-    assert len(paths) == 10
+    assert len(paths) == 12
     assert all(path.exists() for path in paths)
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700
     assert all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in paths)

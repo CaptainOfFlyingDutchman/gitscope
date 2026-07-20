@@ -117,6 +117,7 @@ async def generate_career_report(
         for repository in context.discovery.repositories
     )
 
+    generated_at = datetime.now(UTC)
     report = CareerReport(
         organization=settings.organization,
         identity=ReportIdentity(
@@ -124,7 +125,7 @@ async def generate_career_report(
             authenticated_as=context.authenticated_user.login,
         ),
         collection=CollectionMetadata(
-            generated_at=datetime.now(UTC),
+            generated_at=generated_at,
             repository_scope_file=str(repository_scope.source),
             repository_count=len(context.discovery.repositories),
             github_api_requests=stats.api_requests,
@@ -156,7 +157,10 @@ async def generate_career_report(
             review_collection.reviews,
         ),
         commit_summary=summarize_commits(git_collection.commits),
-        pull_request_summary=summarize_pull_requests(pull_request_collection.pull_requests),
+        pull_request_summary=summarize_pull_requests(
+            pull_request_collection.pull_requests,
+            as_of=generated_at,
+        ),
         review_summary=summarize_reviews(review_collection.reviews),
         pull_requests=pull_request_collection.pull_requests,
         reviews=review_collection.reviews,

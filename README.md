@@ -549,31 +549,34 @@ Use:
 
 ---
 
-# Remaining 0.1.0 Milestones
+# 0.1.0 Milestones
 
-The remaining milestones for the first public release are:
+Completed:
 
-1. **Advanced Pull Request Analytics**
+* **Advanced Pull Request Analytics**
    * merge-time statistics
    * largest and longest-running pull requests
    * open pull-request age
    * pull-request activity rankings and visualizations
-2. **Issue Contributions**
+
+Remaining milestones for the first public release:
+
+1. **Issue Contributions**
    * authored issue collection
    * issue states, timelines, and repository summaries
-3. **Offline Export and CLI UX**
+2. **Offline Export and CLI UX**
    * regenerate individual outputs from an existing `report.json`
    * `gitscope export` commands
    * improved progress and terminal summaries
-4. **Logging, Cache Management, and Diagnostics**
+3. **Logging, Cache Management, and Diagnostics**
    * sanitized diagnostic logging
    * cache inspection and lifecycle commands
    * verbose troubleshooting mode
-5. **CI, Documentation, and Release Readiness**
+4. **CI, Documentation, and Release Readiness**
    * automated tests, linting, typing, and package builds
    * installation, contribution, security, and architecture documentation
    * installed-wheel verification
-6. **GitScope 0.1.0 Release**
+5. **GitScope 0.1.0 Release**
    * final package metadata and version verification
    * `uv tool install` readiness
    * first public release
