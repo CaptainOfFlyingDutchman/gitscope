@@ -111,6 +111,41 @@ class LanguageSummary(ReportModel):
     file_extensions: tuple[CodeChangeBreakdown, ...]
 
 
+class ActivityPeriod(ReportModel):
+    """Commit, pull-request, and review counts for a month or year."""
+
+    period: str
+    commits: int
+    pull_requests: int
+    reviews: int
+    total: int
+
+
+class CareerMilestone(ReportModel):
+    """A deterministic event in the target user's contribution history."""
+
+    key: str
+    label: str
+    activity_type: Literal["commit", "pull_request", "review", "contribution"]
+    occurred_at: datetime
+    repository: str
+    sequence: int | None = None
+
+
+class TimelineSummary(ReportModel):
+    """Unified contribution history ready for reports and charts."""
+
+    first_contribution: datetime | None
+    last_contribution: datetime | None
+    career_span_days: int
+    active_days: int
+    monthly_activity: tuple[ActivityPeriod, ...]
+    yearly_activity: tuple[ActivityPeriod, ...]
+    most_active_month: ActivityPeriod | None
+    most_active_year: ActivityPeriod | None
+    milestones: tuple[CareerMilestone, ...]
+
+
 class CollectionMetadata(ReportModel):
     """Provenance and completeness information for a report run."""
 
@@ -129,7 +164,7 @@ class CollectionMetadata(ReportModel):
 class CareerReport(ReportModel):
     """Stable, versioned JSON representation of collected GitScope data."""
 
-    schema_version: Literal["1.2"] = "1.2"
+    schema_version: Literal["1.3"] = "1.3"
     organization: str
     identity: ReportIdentity
     collection: CollectionMetadata
@@ -137,6 +172,7 @@ class CareerReport(ReportModel):
     commit_summary: CommitSummary
     repository_analytics: tuple[RepositoryContributionSummary, ...]
     language_summary: LanguageSummary
+    timeline: TimelineSummary
     pull_request_summary: PullRequestSummary
     review_summary: ReviewSummary
     pull_requests: tuple[PullRequest, ...]

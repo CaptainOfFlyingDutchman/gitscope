@@ -143,6 +143,11 @@ def analyze(
         f"[bold]{len(report.language_summary.contributed_languages)}[/bold] inferred languages "
         f"and [bold]{len(report.language_summary.file_extensions)}[/bold] file extensions."
     )
+    console.print(
+        f"Built a contribution timeline spanning "
+        f"[bold]{report.timeline.career_span_days:,}[/bold] days with "
+        f"[bold]{len(report.timeline.milestones)}[/bold] career milestones."
+    )
     if report.collection.graphql_rate_limit_remaining is not None:
         console.print(
             f"GraphQL rate limit remaining: "

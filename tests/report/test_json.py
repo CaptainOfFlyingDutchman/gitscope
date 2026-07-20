@@ -12,6 +12,7 @@ from gitscope.models.report import (
     PullRequestSummary,
     ReportIdentity,
     ReviewSummary,
+    TimelineSummary,
 )
 from gitscope.report.json import write_json_report
 
@@ -33,6 +34,17 @@ def empty_report() -> CareerReport:
             primary_repository_languages={},
             contributed_languages=(),
             file_extensions=(),
+        ),
+        timeline=TimelineSummary(
+            first_contribution=None,
+            last_contribution=None,
+            career_span_days=0,
+            active_days=0,
+            monthly_activity=(),
+            yearly_activity=(),
+            most_active_month=None,
+            most_active_year=None,
+            milestones=(),
         ),
         commit_summary=CommitSummary(
             total=0,
@@ -75,7 +87,7 @@ def test_json_report_round_trips_with_private_permissions(tmp_path: Path) -> Non
     path = write_json_report(empty_report(), output_directory)
     restored = CareerReport.model_validate_json(path.read_text(encoding="utf-8"))
 
-    assert restored.schema_version == "1.2"
+    assert restored.schema_version == "1.3"
     assert restored.organization == "josys-src"
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700
     assert stat.S_IMODE(path.stat().st_mode) == 0o600

@@ -10,6 +10,7 @@ from gitscope.analytics.commits import summarize_commits
 from gitscope.analytics.prs import summarize_pull_requests
 from gitscope.analytics.repositories import summarize_languages, summarize_repositories
 from gitscope.analytics.reviews import summarize_reviews
+from gitscope.analytics.timeline import build_timeline
 from gitscope.cache import JsonCache
 from gitscope.config import Settings
 from gitscope.git.collection import collect_git_contributions
@@ -140,6 +141,11 @@ async def generate_career_report(
         language_summary=summarize_languages(
             report_repositories,
             git_collection.repository_analyses,
+        ),
+        timeline=build_timeline(
+            git_collection.commits,
+            pull_request_collection.pull_requests,
+            review_collection.reviews,
         ),
         commit_summary=summarize_commits(git_collection.commits),
         pull_request_summary=summarize_pull_requests(pull_request_collection.pull_requests),

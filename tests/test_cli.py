@@ -20,6 +20,7 @@ from gitscope.models.report import (
     PullRequestSummary,
     ReportIdentity,
     ReviewSummary,
+    TimelineSummary,
 )
 from gitscope.report.generate import GeneratedCareerReport
 from gitscope.repository_scope import RepositoryScope
@@ -94,6 +95,17 @@ def test_analyze_generates_report(
                 contributed_languages=(),
                 file_extensions=(),
             ),
+            timeline=TimelineSummary(
+                first_contribution=None,
+                last_contribution=None,
+                career_span_days=0,
+                active_days=0,
+                monthly_activity=(),
+                yearly_activity=(),
+                most_active_month=None,
+                most_active_year=None,
+                milestones=(),
+            ),
             commit_summary=CommitSummary(
                 total=0,
                 additions=0,
@@ -158,6 +170,7 @@ def test_analyze_generates_report(
         result.stdout
     )
     assert "0 inferred languages" in result.stdout
+    assert "0 days with 0 career milestones" in result.stdout
     assert "4,999" in result.stdout
     assert "report.json" in result.stdout
 

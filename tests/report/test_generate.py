@@ -68,7 +68,7 @@ async def test_generate_career_report_builds_and_writes_schema(
     generated = await generate_career_report(settings, scope)
 
     assert generated.path.exists()
-    assert generated.report.schema_version == "1.2"
+    assert generated.report.schema_version == "1.3"
     assert generated.report.collection.github_api_requests == 4
     assert generated.report.collection.git_repositories_processed == 1
     assert generated.report.commit_summary.total == 0
@@ -76,4 +76,6 @@ async def test_generate_career_report_builds_and_writes_schema(
     assert generated.report.repository_analytics[0].reviews == 1
     assert generated.report.pull_request_summary.total == 1
     assert generated.report.review_summary.total == 1
+    assert generated.report.timeline.monthly_activity[0].pull_requests == 1
+    assert generated.report.timeline.monthly_activity[0].reviews == 1
     assert generated.report.repositories[0].name_with_owner == "josys-src/frontend"
