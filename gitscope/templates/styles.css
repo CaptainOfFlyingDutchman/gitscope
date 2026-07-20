@@ -85,6 +85,7 @@ h1 { margin: 0; font-size: clamp(2.6rem, 7vw, 5.8rem); line-height: .98; letter-
 .metric--commits::before { background: var(--blue); }
 .metric--prs::before { background: var(--orange); }
 .metric--reviews::before { background: var(--green); }
+.metric--issues::before { background: #cc79a7; }
 .metric span, .metric small { display: block; color: var(--muted); }
 .metric span { font-size: .82rem; font-weight: 750; letter-spacing: .02em; }
 .metric strong { display: block; margin: 10px 0 8px; font-size: clamp(2.15rem, 4vw, 3.3rem); line-height: 1; letter-spacing: -.055em; }

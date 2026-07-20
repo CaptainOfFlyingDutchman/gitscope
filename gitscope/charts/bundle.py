@@ -15,6 +15,7 @@ from gitscope.charts.activity import (
     yearly_activity_chart,
 )
 from gitscope.charts.commits import commit_patterns_chart
+from gitscope.charts.issues import issue_states_chart
 from gitscope.charts.languages import contributed_languages_chart, file_extensions_chart
 from gitscope.charts.pull_requests import (
     pull_request_merge_times_chart,
@@ -71,6 +72,7 @@ def build_chart_figures(report: CareerReport) -> tuple[tuple[str, Figure], ...]:
             pull_request_repository_activity_chart(report.pull_request_summary),
         ),
         ("pull-request-states", pull_request_states_chart(report.pull_request_summary)),
+        ("issue-states", issue_states_chart(report.issue_summary)),
         ("review-activity", review_activity_chart(report.timeline)),
         ("review-states", review_states_chart(report.review_summary)),
         ("contributed-languages", contributed_languages_chart(report.language_summary)),

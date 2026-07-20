@@ -2,8 +2,10 @@
 
 from datetime import UTC, datetime, timedelta
 
+from gitscope.analytics.issues import summarize_issues
 from gitscope.analytics.prs import summarize_pull_requests
 from gitscope.analytics.reviews import summarize_reviews
+from gitscope.models.issue import Issue, IssueState
 from gitscope.models.pull_request import PullRequest, PullRequestState
 from gitscope.models.review import PullRequestReview, ReviewState
 
@@ -99,3 +101,43 @@ def test_review_summary() -> None:
     assert summary.total == 2
     assert summary.approvals == 1
     assert summary.changes_requested == 1
+
+
+def test_issue_summary() -> None:
+    created_at = datetime(2026, 1, 1, tzinfo=UTC)
+    issues = (
+        Issue(
+            node_id="ISSUE_1",
+            repository="josys-src/frontend",
+            number=1,
+            title="Open issue",
+            url="https://github.com/josys-src/frontend/issues/1",
+            state=IssueState.OPEN,
+            created_at=created_at,
+            updated_at=created_at,
+            comment_count=2,
+        ),
+        Issue(
+            node_id="ISSUE_2",
+            repository="josys-src/backend",
+            number=2,
+            title="Closed issue",
+            url="https://github.com/josys-src/backend/issues/2",
+            state=IssueState.CLOSED,
+            created_at=created_at,
+            updated_at=created_at + timedelta(days=2),
+            closed_at=created_at + timedelta(days=2),
+            comment_count=3,
+        ),
+    )
+
+    summary = summarize_issues(issues)
+
+    assert summary.total == 2
+    assert summary.open == 1
+    assert summary.closed == 1
+    assert summary.closure_rate == 0.5
+    assert summary.average_close_time_hours == 48
+    assert summary.median_close_time_hours == 48
+    assert summary.total_comments == 5
+    assert summary.by_repository == {"josys-src/backend": 1, "josys-src/frontend": 1}

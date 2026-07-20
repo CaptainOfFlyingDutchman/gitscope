@@ -51,6 +51,11 @@
         <article class="metric metric--prs"><span>Average merge time</span><strong>{% if report.pull_request_summary.average_merge_time_hours is not none %}{{ report.pull_request_summary.average_merge_time_hours | duration }}{% else %}—{% endif %}</strong><small>Creation to merge</small></article>
         <article class="metric metric--prs"><span>Median merge time</span><strong>{% if report.pull_request_summary.median_merge_time_hours is not none %}{{ report.pull_request_summary.median_merge_time_hours | duration }}{% else %}—{% endif %}</strong><small>Less affected by outliers</small></article>
         <article class="metric metric--prs"><span>Oldest open PR</span><strong>{% if report.pull_request_summary.oldest_open %}{{ report.pull_request_summary.oldest_open[0].duration_hours | duration }}{% else %}—{% endif %}</strong><small>{% if report.pull_request_summary.oldest_open %}#{{ report.pull_request_summary.oldest_open[0].number }} in {{ report.pull_request_summary.oldest_open[0].repository }}{% else %}No open PRs{% endif %}</small></article>
+        <article class="metric metric--issues"><span>Authored issues</span><strong>{{ report.issue_summary.total | number }}</strong><small>{% if report.issue_summary.closure_rate is not none %}{{ "%.1f" | format(report.issue_summary.closure_rate * 100) }}% closed{% else %}No issues collected{% endif %}</small></article>
+        {% if report.issue_summary.total %}
+        <article class="metric metric--issues"><span>Issue discussion</span><strong>{{ report.issue_summary.total_comments | number }}</strong><small>Comments across authored issues</small></article>
+        <article class="metric metric--issues"><span>Median issue close time</span><strong>{% if report.issue_summary.median_close_time_hours is not none %}{{ report.issue_summary.median_close_time_hours | duration }}{% else %}—{% endif %}</strong><small>Creation to closure</small></article>
+        {% endif %}
       </div>
     </section>
 
@@ -97,10 +102,10 @@
     </section>
 
     <section aria-labelledby="repositories-title">
-      <div class="section-heading"><div><p class="eyebrow">Repository scope</p><h2 id="repositories-title">Contribution details</h2></div><p>Sorted by combined commits, pull requests, and reviews.</p></div>
+      <div class="section-heading"><div><p class="eyebrow">Repository scope</p><h2 id="repositories-title">Contribution details</h2></div><p>Sorted by combined commits, pull requests, issues, and reviews.</p></div>
       <div class="table-card"><div class="table-scroll" tabindex="0"><table>
-        <thead><tr><th>Repository</th><th>Language</th><th class="numeric">Commits</th><th class="numeric">PRs</th><th class="numeric">Reviews</th><th class="numeric">Files changed</th><th>Last contribution</th></tr></thead>
-        <tbody>{% for repository in repositories %}<tr><th scope="row">{{ repository.name_with_owner }}{% if repository.is_archived %}<span class="badge">Archived</span>{% endif %}</th><td>{{ repository.primary_language or '—' }}</td><td class="numeric">{{ repository.commits | number }}</td><td class="numeric">{{ repository.pull_requests | number }}</td><td class="numeric">{{ repository.reviews | number }}</td><td class="numeric">{{ repository.files_changed | number }}</td><td>{% if repository.last_contribution %}{{ repository.last_contribution | date }}{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="7" class="empty-state">No repository activity was collected.</td></tr>{% endfor %}</tbody>
+        <thead><tr><th>Repository</th><th>Language</th><th class="numeric">Commits</th><th class="numeric">PRs</th><th class="numeric">Issues</th><th class="numeric">Reviews</th><th class="numeric">Files changed</th><th>Last contribution</th></tr></thead>
+        <tbody>{% for repository in repositories %}<tr><th scope="row">{{ repository.name_with_owner }}{% if repository.is_archived %}<span class="badge">Archived</span>{% endif %}</th><td>{{ repository.primary_language or '—' }}</td><td class="numeric">{{ repository.commits | number }}</td><td class="numeric">{{ repository.pull_requests | number }}</td><td class="numeric">{{ repository.issues | number }}</td><td class="numeric">{{ repository.reviews | number }}</td><td class="numeric">{{ repository.files_changed | number }}</td><td>{% if repository.last_contribution %}{{ repository.last_contribution | date }}{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="8" class="empty-state">No repository activity was collected.</td></tr>{% endfor %}</tbody>
       </table></div></div>
     </section>
 
@@ -111,6 +116,14 @@
         <tbody>{% for pull_request in recent_pull_requests %}<tr><th scope="row"><a href="{{ pull_request.url }}" target="_blank" rel="noopener noreferrer">#{{ pull_request.number }} {{ pull_request.title }}</a>{% if pull_request.is_draft %}<span class="badge">Draft</span>{% endif %}</th><td>{{ pull_request.repository }}</td><td><span class="state state--{{ pull_request.state.value | lower }}">{{ pull_request.state.value | title }}</span></td><td class="numeric">+{{ pull_request.additions | number }} / −{{ pull_request.deletions | number }}</td><td>{{ pull_request.updated_at | date }}</td></tr>{% else %}<tr><td colspan="5" class="empty-state">No authored pull requests were collected.</td></tr>{% endfor %}</tbody>
       </table></div></div>
     </section>
+
+    {% if report.issue_summary.total %}<section aria-labelledby="issues-title">
+      <div class="section-heading"><div><p class="eyebrow">Problem discovery</p><h2 id="issues-title">Recently updated issues</h2></div><p>Up to twelve authored issues from the selected scope.</p></div>
+      <div class="table-card"><div class="table-scroll" tabindex="0"><table>
+        <thead><tr><th>Issue</th><th>Repository</th><th>State</th><th class="numeric">Comments</th><th>Labels</th><th>Updated</th></tr></thead>
+        <tbody>{% for issue in recent_issues %}<tr><th scope="row"><a href="{{ issue.url }}" target="_blank" rel="noopener noreferrer">#{{ issue.number }} {{ issue.title }}</a></th><td>{{ issue.repository }}</td><td><span class="state state--{{ issue.state.value | lower }}">{{ issue.state.value | title }}</span></td><td class="numeric">{{ issue.comment_count | number }}</td><td>{% if issue.labels %}{{ issue.labels | join(', ') }}{% else %}—{% endif %}</td><td>{{ issue.updated_at | date }}</td></tr>{% else %}<tr><td colspan="6" class="empty-state">No authored issues were collected.</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+    </section>{% endif %}
 
     {% if report.collection.warnings %}<section class="notice" aria-labelledby="warnings-title"><h2 id="warnings-title">Collection notes</h2><ul>{% for warning in report.collection.warnings %}<li>{{ warning }}</li>{% endfor %}</ul></section>{% endif %}
   </main>

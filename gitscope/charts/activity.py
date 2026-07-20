@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 
 from gitscope.charts.style import (
     COMMITS_COLOR,
+    ISSUES_COLOR,
     PULL_REQUESTS_COLOR,
     REVIEWS_COLOR,
     apply_chart_style,
@@ -25,6 +26,7 @@ def monthly_activity_chart(timeline: TimelineSummary) -> go.Figure:
             PULL_REQUESTS_COLOR,
         ),
         ("Reviews", [period.reviews for period in timeline.monthly_activity], REVIEWS_COLOR),
+        ("Issues", [period.issues for period in timeline.monthly_activity], ISSUES_COLOR),
     ):
         figure.add_trace(
             go.Scatter(
@@ -68,6 +70,13 @@ def yearly_activity_chart(timeline: TimelineSummary) -> go.Figure:
                 name="Reviews",
                 marker_color=REVIEWS_COLOR,
                 hovertemplate="Reviews: %{y:,}<extra></extra>",
+            ),
+            go.Bar(
+                x=periods,
+                y=[period.issues for period in timeline.yearly_activity],
+                name="Issues",
+                marker_color=ISSUES_COLOR,
+                hovertemplate="Issues: %{y:,}<extra></extra>",
             ),
         ]
     )

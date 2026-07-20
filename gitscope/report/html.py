@@ -24,19 +24,23 @@ _DASHBOARD_CHART_ORDER = (
     "pull-request-merge-times",
     "pull-request-repositories",
     "pull-request-states",
+    "issue-states",
     "review-activity",
     "review-states",
     "contributed-languages",
     "career-milestones",
 )
 _CHART_DESCRIPTIONS = {
-    "monthly-activity": "Monthly commits, pull requests, and reviews across the selected scope.",
+    "monthly-activity": (
+        "Monthly commits, pull requests, issues, and reviews across the selected scope."
+    ),
     "yearly-activity": "Year-over-year comparison of contribution activity.",
     "commit-patterns": "Authored commit patterns by weekday and author-local hour.",
     "repository-rankings": "The repositories with the most commits, pull requests, and reviews.",
     "pull-request-merge-times": "How long merged pull requests remained open before merging.",
     "pull-request-repositories": "Repositories ranked by authored pull-request activity.",
     "pull-request-states": "Authored pull requests grouped by their current outcome.",
+    "issue-states": "Authored issues grouped by their current lifecycle state.",
     "review-activity": "Submitted review activity over time.",
     "review-states": "Submitted reviews grouped by review state.",
     "contributed-languages": "Cumulative changed lines inferred from contributed file types.",
@@ -98,6 +102,11 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
     environment.filters["duration"] = _format_duration
 
     figures = dict(build_chart_figures(report))
+    chart_slugs = tuple(
+        slug
+        for slug in _DASHBOARD_CHART_ORDER
+        if slug != "issue-states" or report.issue_summary.total
+    )
     charts = tuple(
         DashboardChart(
             slug=slug,
@@ -110,19 +119,22 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
                 config={"displaylogo": False, "responsive": True, "scrollZoom": False},
             ),
         )
-        for slug in _DASHBOARD_CHART_ORDER
+        for slug in chart_slugs
     )
     repositories = tuple(
         sorted(
             report.repository_analytics,
             key=lambda item: (
-                -(item.commits + item.pull_requests + item.reviews),
+                -(item.commits + item.pull_requests + item.issues + item.reviews),
                 item.name_with_owner,
             ),
         )
     )
     recent_pull_requests = tuple(
         sorted(report.pull_requests, key=lambda item: item.updated_at, reverse=True)[:12]
+    )
+    recent_issues = tuple(
+        sorted(report.issues, key=lambda item: item.updated_at, reverse=True)[:12]
     )
     template = environment.get_template("report.html")
     html = template.render(
@@ -131,6 +143,7 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
         heatmap=build_contribution_heatmap(report),
         repositories=repositories,
         recent_pull_requests=recent_pull_requests,
+        recent_issues=recent_issues,
     )
 
     stylesheet = (_TEMPLATE_DIRECTORY / "styles.css").read_text(encoding="utf-8")
@@ -143,10 +156,11 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
 
 
 def build_contribution_heatmap(report: CareerReport) -> ContributionHeatmap:
-    """Aggregate commits, PRs, and reviews into a recent 53-week calendar."""
+    """Aggregate commits, PRs, issues, and reviews into a recent activity calendar."""
     activity: Counter[date] = Counter(commit.authored_at.date() for commit in report.commits)
     activity.update(pull_request.created_at.date() for pull_request in report.pull_requests)
     activity.update((review.submitted_at or review.created_at).date() for review in report.reviews)
+    activity.update(issue.created_at.date() for issue in report.issues)
 
     end = report.collection.generated_at.date()
     current_week_start = end - timedelta(days=(end.weekday() + 1) % 7)

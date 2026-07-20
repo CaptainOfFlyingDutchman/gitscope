@@ -12,6 +12,7 @@ from gitscope.git.collection import GitCollection
 from gitscope.report.generate import generate_career_report
 from gitscope.repository_scope import RepositoryScope
 from tests.github.test_graphql import repository_node
+from tests.github.test_issues import issue_node, issue_page
 from tests.github.test_prs import pull_request_node, pull_request_page
 from tests.github.test_reviews import reviewed_search_page
 
@@ -49,6 +50,13 @@ async def test_generate_career_report_builds_and_writes_schema(
                 cursor=None,
                 issue_count=1,
             )
+        elif "AuthoredIssues" in query:
+            data = issue_page(
+                [issue_node(2)],
+                has_next_page=False,
+                cursor=None,
+                issue_count=1,
+            )
         else:
             data = reviewed_search_page(has_more_reviews=False)
         return httpx.Response(200, json={"data": data})
@@ -74,16 +82,19 @@ async def test_generate_career_report_builds_and_writes_schema(
     assert generated.markdown_path.exists()
     assert generated.csv_path == tmp_path / "career-report" / "report.csv"
     assert generated.csv_path.exists()
-    assert len(generated.chart_paths) == 12
+    assert len(generated.chart_paths) == 13
     assert all(path.exists() for path in generated.chart_paths)
-    assert generated.report.schema_version == "1.4"
-    assert generated.report.collection.github_api_requests == 4
+    assert generated.report.schema_version == "1.5"
+    assert generated.report.collection.github_api_requests == 5
     assert generated.report.collection.git_repositories_processed == 1
     assert generated.report.commit_summary.total == 0
     assert generated.report.repository_analytics[0].pull_requests == 1
     assert generated.report.repository_analytics[0].reviews == 1
+    assert generated.report.repository_analytics[0].issues == 1
     assert generated.report.pull_request_summary.total == 1
     assert generated.report.review_summary.total == 1
+    assert generated.report.issue_summary.total == 1
     assert generated.report.timeline.monthly_activity[0].pull_requests == 1
     assert generated.report.timeline.monthly_activity[0].reviews == 1
+    assert generated.report.timeline.monthly_activity[0].issues == 1
     assert generated.report.repositories[0].name_with_owner == "josys-src/frontend"

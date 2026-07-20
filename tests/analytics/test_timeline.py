@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from gitscope.analytics.timeline import build_timeline
 from gitscope.models.commit import CommitContribution
+from gitscope.models.issue import Issue, IssueState
 from gitscope.models.pull_request import PullRequest, PullRequestState
 from gitscope.models.review import PullRequestReview, ReviewState
 
@@ -53,6 +54,20 @@ def review(index: int, occurred_at: datetime) -> PullRequestReview:
     )
 
 
+def issue(index: int, occurred_at: datetime) -> Issue:
+    return Issue(
+        node_id=f"ISSUE_{index}",
+        repository="org/repo",
+        number=index,
+        title=f"Issue {index}",
+        url=f"https://github.com/org/repo/issues/{index}",
+        state=IssueState.OPEN,
+        created_at=occurred_at,
+        updated_at=occurred_at,
+        comment_count=0,
+    )
+
+
 def test_timeline_zero_fills_months_and_combines_activity() -> None:
     january = datetime(2025, 1, 1, tzinfo=UTC)
     march = datetime(2025, 3, 1, tzinfo=UTC)
@@ -61,6 +76,7 @@ def test_timeline_zero_fills_months_and_combines_activity() -> None:
         (commit(1, january),),
         (pull_request(1, march, merged=True),),
         (review(1, march + timedelta(days=1)),),
+        (issue(1, march + timedelta(days=2)),),
     )
 
     assert [period.period for period in timeline.monthly_activity] == [
@@ -71,10 +87,11 @@ def test_timeline_zero_fills_months_and_combines_activity() -> None:
     assert timeline.monthly_activity[1].total == 0
     assert timeline.monthly_activity[2].pull_requests == 1
     assert timeline.monthly_activity[2].reviews == 1
-    assert timeline.yearly_activity[0].total == 3
+    assert timeline.monthly_activity[2].issues == 1
+    assert timeline.yearly_activity[0].total == 4
     assert timeline.most_active_month == timeline.monthly_activity[2]
-    assert timeline.active_days == 3
-    assert timeline.career_span_days == 60
+    assert timeline.active_days == 4
+    assert timeline.career_span_days == 61
 
 
 def test_timeline_emits_reached_sequence_milestones() -> None:
@@ -91,8 +108,11 @@ def test_timeline_emits_reached_sequence_milestones() -> None:
     reviews = tuple(
         review(index + 1, start + timedelta(days=20, minutes=index)) for index in range(2500)
     )
+    issues = tuple(
+        issue(index + 1, start + timedelta(days=30, minutes=index)) for index in range(100)
+    )
 
-    timeline = build_timeline(commits, pull_requests, reviews)
+    timeline = build_timeline(commits, pull_requests, reviews, issues)
     keys = {milestone.key for milestone in timeline.milestones}
 
     assert {
@@ -107,6 +127,8 @@ def test_timeline_emits_reached_sequence_milestones() -> None:
         "review_500",
         "review_1000",
         "review_2500",
+        "first_issue",
+        "issue_100",
         "last_contribution",
     } == keys
     assert list(timeline.milestones) == sorted(

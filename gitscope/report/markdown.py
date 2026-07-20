@@ -24,6 +24,7 @@ def _render_markdown(report: CareerReport) -> list[str]:
     commits = report.commit_summary
     pull_requests = report.pull_request_summary
     reviews = report.review_summary
+    issues = report.issue_summary
     timeline = report.timeline
     merge_rate = (
         f"{pull_requests.merge_rate * 100:.1f}%"
@@ -55,6 +56,15 @@ def _render_markdown(report: CareerReport) -> list[str]:
                 ("Authored commits", f"{commits.total:,}", f"{commits.merge_commits:,} merges"),
                 ("Authored pull requests", f"{pull_requests.total:,}", f"{merge_rate} merge rate"),
                 ("Submitted reviews", f"{reviews.total:,}", f"{reviews.approvals:,} approvals"),
+                (
+                    "Authored issues",
+                    f"{issues.total:,}",
+                    (
+                        f"{issues.closure_rate * 100:.1f}% closed"
+                        if issues.closure_rate is not None
+                        else "No issues collected"
+                    ),
+                ),
                 (
                     "Active days",
                     f"{timeline.active_days:,}",
@@ -88,12 +98,13 @@ def _render_markdown(report: CareerReport) -> list[str]:
     )
     lines.extend(
         _table(
-            ("Year", "Commits", "Pull requests", "Reviews", "Total"),
+            ("Year", "Commits", "Pull requests", "Issues", "Reviews", "Total"),
             tuple(
                 (
                     period.period,
                     f"{period.commits:,}",
                     f"{period.pull_requests:,}",
+                    f"{period.issues:,}",
                     f"{period.reviews:,}",
                     f"{period.total:,}",
                 )
@@ -114,13 +125,22 @@ def _render_markdown(report: CareerReport) -> list[str]:
     )
     lines.extend(
         _table(
-            ("Repository", "Language", "Commits", "PRs", "Reviews", "Last contribution"),
+            (
+                "Repository",
+                "Language",
+                "Commits",
+                "PRs",
+                "Issues",
+                "Reviews",
+                "Last contribution",
+            ),
             tuple(
                 (
                     repository.name_with_owner,
                     repository.primary_language or "—",
                     f"{repository.commits:,}",
                     f"{repository.pull_requests:,}",
+                    f"{repository.issues:,}",
                     f"{repository.reviews:,}",
                     _format_optional_date(repository.last_contribution),
                 )
@@ -204,6 +224,15 @@ def _render_markdown(report: CareerReport) -> list[str]:
     lines.extend(
         [
             "",
+            "## Issue outcomes",
+            "",
+            f"- **Closed:** {issues.closed:,}",
+            f"- **Open:** {issues.open:,}",
+            f"- **Comments:** {issues.total_comments:,}",
+            "- **Average close time:** "
+            f"{_format_optional_duration(issues.average_close_time_hours)}",
+            f"- **Median close time:** {_format_optional_duration(issues.median_close_time_hours)}",
+            "",
             "## Review outcomes",
             "",
             f"- **Approvals:** {reviews.approvals:,}",
@@ -239,6 +268,18 @@ def _render_markdown(report: CareerReport) -> list[str]:
         )
     else:
         lines.append("No authored pull requests were collected.")
+
+    lines.extend(["", "## Recently updated issues", ""])
+    recent_issues = sorted(report.issues, key=lambda item: item.updated_at, reverse=True)[:12]
+    if recent_issues:
+        lines.extend(
+            f"- [{_escape_link_text(item.title)}]({item.url}) — "
+            f"`{_escape_code(item.repository)}#{item.number}` · {item.state.value.title()} · "
+            f"{item.comment_count:,} comments · updated {_format_date(item.updated_at)}"
+            for item in recent_issues
+        )
+    else:
+        lines.append("No authored issues were collected.")
 
     if report.collection.warnings:
         lines.extend(["", "## Collection notes", ""])

@@ -87,7 +87,7 @@ def test_json_report_round_trips_with_private_permissions(tmp_path: Path) -> Non
     path = write_json_report(empty_report(), output_directory)
     restored = CareerReport.model_validate_json(path.read_text(encoding="utf-8"))
 
-    assert restored.schema_version == "1.4"
+    assert restored.schema_version == "1.5"
     assert restored.organization == "josys-src"
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
@@ -97,6 +97,8 @@ def test_schema_13_report_remains_readable() -> None:
     payload = empty_report().model_dump(mode="json")
     payload["schema_version"] = "1.3"
     summary = payload["pull_request_summary"]
+    payload.pop("issue_summary")
+    payload.pop("issues")
     for field in (
         "average_merge_time_hours",
         "median_merge_time_hours",

@@ -5,7 +5,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from gitscope.models.commit import CommitContribution
+from gitscope.models.issue import Issue, IssueState
 from gitscope.models.pull_request import PullRequest, PullRequestState
+from gitscope.models.report import IssueSummary
 from gitscope.models.review import PullRequestReview, ReviewState
 from gitscope.report.html import build_contribution_heatmap, write_html_report
 from tests.report.test_json import empty_report
@@ -49,8 +51,24 @@ def test_heatmap_combines_commits_pull_requests_and_reviews() -> None:
         submitted_at=timestamp,
         url="https://github.com/josys-src/frontend/pull/2#review-1",
     )
+    issue = Issue(
+        node_id="ISSUE_1",
+        repository="josys-src/frontend",
+        number=3,
+        title="Track dashboard work",
+        url="https://github.com/josys-src/frontend/issues/3",
+        state=IssueState.OPEN,
+        created_at=timestamp,
+        updated_at=timestamp,
+        comment_count=1,
+    )
     report = empty_report().model_copy(
-        update={"commits": (commit,), "pull_requests": (pull_request,), "reviews": (review,)}
+        update={
+            "commits": (commit,),
+            "pull_requests": (pull_request,),
+            "reviews": (review,),
+            "issues": (issue,),
+        }
     )
 
     heatmap = build_contribution_heatmap(report)
@@ -58,14 +76,32 @@ def test_heatmap_combines_commits_pull_requests_and_reviews() -> None:
 
     assert len(heatmap.weeks) == 53
     assert all(len(week) == 7 for week in heatmap.weeks)
-    assert 3 in values
+    assert 4 in values
     assert heatmap.start <= timestamp.date() <= heatmap.end
 
 
 def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> None:
     output_directory = tmp_path / "career-report"
+    timestamp = datetime(2026, 7, 20, 12, tzinfo=UTC)
+    issue = Issue(
+        node_id="ISSUE_HTML",
+        repository="josys-src/frontend",
+        number=9,
+        title="Track <unsafe> dashboard work",
+        url="https://github.com/josys-src/frontend/issues/9",
+        state=IssueState.OPEN,
+        created_at=timestamp,
+        updated_at=timestamp,
+        comment_count=1,
+    )
+    report = empty_report().model_copy(
+        update={
+            "issue_summary": IssueSummary(total=1, open=1, closed=0),
+            "issues": (issue,),
+        }
+    )
 
-    path = write_html_report(empty_report(), output_directory)
+    path = write_html_report(report, output_directory)
     html = path.read_text(encoding="utf-8")
 
     assert path == output_directory / "report.html"
@@ -99,4 +135,7 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
     assert yearly_position < extensions_position < commit_patterns_position
     assert 'src="charts/plotly.min.js"' in html
     assert "https://cdn.plot.ly" not in html
-    assert html.count("plotly-graph-div") == 12
+    assert "Issue Outcomes" in html
+    assert "Recently updated issues" in html
+    assert "Track &lt;unsafe&gt; dashboard work" in html
+    assert html.count("plotly-graph-div") == 13

@@ -8,6 +8,7 @@ from gitscope.charts.activity import (
     yearly_activity_chart,
 )
 from gitscope.charts.commits import commit_patterns_chart
+from gitscope.charts.issues import issue_states_chart
 from gitscope.charts.languages import contributed_languages_chart, file_extensions_chart
 from gitscope.charts.pull_requests import (
     pull_request_merge_times_chart,
@@ -22,6 +23,7 @@ from gitscope.models.report import (
     CareerMilestone,
     CodeChangeBreakdown,
     CommitSummary,
+    IssueSummary,
     LanguageSummary,
     PullRequestSummary,
     RepositoryContributionSummary,
@@ -37,7 +39,8 @@ def test_chart_builders_preserve_report_values() -> None:
         commits=12,
         pull_requests=3,
         reviews=7,
-        total=22,
+        total=24,
+        issues=2,
     )
     timeline = TimelineSummary(
         first_contribution=occurred_at,
@@ -102,6 +105,7 @@ def test_chart_builders_preserve_report_values() -> None:
         comments=1,
         dismissed=1,
     )
+    issues = IssueSummary(total=2, open=1, closed=1, closure_rate=0.5)
     languages = LanguageSummary(
         primary_repository_languages={"TypeScript": 1},
         contributed_languages=(
@@ -140,9 +144,11 @@ def test_chart_builders_preserve_report_values() -> None:
     )
     merge_time_figure = pull_request_merge_times_chart((pull_request,))
     pull_request_repository_figure = pull_request_repository_activity_chart(pull_requests)
+    issue_figure = issue_states_chart(issues)
 
     assert list(monthly_figure.data[0].y) == [12]
-    assert len(yearly_figure.data) == 3
+    assert len(monthly_figure.data) == 4
+    assert len(yearly_figure.data) == 4
     assert len(commit_figure.data) == 2
     assert len(repository_figure.data) == 3
     assert list(pull_request_figure.data[0].x) == [2, 1, 0]
@@ -153,3 +159,4 @@ def test_chart_builders_preserve_report_values() -> None:
     assert list(milestone_figure.data[0].text) == ["First authored commit"]
     assert sum(merge_time_figure.data[0].y) == 1
     assert list(pull_request_repository_figure.data[0].x) == [3]
+    assert list(issue_figure.data[0].x) == [1, 1]

@@ -137,7 +137,8 @@ def analyze(
     console.print(f"Source: {context.discovery.source.replace('-', ' ')}.")
     console.print(
         f"Collected [bold]{report.commit_summary.total}[/bold] authored commits, "
-        f"[bold]{report.pull_request_summary.total}[/bold] authored pull requests, and "
+        f"[bold]{report.pull_request_summary.total}[/bold] authored pull requests, "
+        f"[bold]{report.issue_summary.total}[/bold] authored issues, and "
         f"[bold]{report.review_summary.total}[/bold] submitted reviews."
     )
     console.print(

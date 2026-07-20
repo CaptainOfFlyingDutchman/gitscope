@@ -10,6 +10,7 @@ from gitscope.models.report import (
     CareerReport,
     CodeChangeBreakdown,
     CommitSummary,
+    IssueSummary,
     LanguageSummary,
     PullRequestSummary,
     ReviewSummary,
@@ -61,6 +62,13 @@ def contribution_report() -> CareerReport:
                 changes_requested=100,
                 comments=190,
                 dismissed=10,
+            ),
+            "issue_summary": IssueSummary(
+                total=8,
+                open=2,
+                closed=6,
+                closure_rate=0.75,
+                total_comments=12,
             ),
             "language_summary": LanguageSummary(
                 primary_repository_languages={"TypeScript": 4},
@@ -118,10 +126,11 @@ def test_resume_document_uses_evidence_without_repository_names() -> None:
 
     assert document.profile.title == "Staff Engineer"
     assert document.technologies == ("TypeScript", "Python")
-    assert len(document.metrics) == 4
+    assert len(document.metrics) == 5
     assert document.milestones[0].label == "500th commit"
     assert "500 authored commits" in rendered
     assert "1,000 submitted code reviews" in rendered
+    assert "8 authored issues" in rendered
     assert "private-repo" not in rendered
 
 

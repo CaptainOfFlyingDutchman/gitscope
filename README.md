@@ -181,6 +181,7 @@ gitscope/
 │   │
 │   ├── analytics/
 │   │     commits.py
+│   │     issues.py
 │   │     prs.py
 │   │     reviews.py
 │   │     repositories.py
@@ -189,6 +190,8 @@ gitscope/
 │   ├── charts/
 │   │     activity.py
 │   │     commits.py
+│   │     issues.py
+│   │     pull_requests.py
 │   │     reviews.py
 │   │     languages.py
 │   │     timeline.py
@@ -204,6 +207,7 @@ gitscope/
 │   │     styles.css
 │   │
 │   └── models/
+│         issue.py
 │
 └── tests/
 ```
@@ -558,25 +562,25 @@ Completed:
    * largest and longest-running pull requests
    * open pull-request age
    * pull-request activity rankings and visualizations
+* **Issue Contributions**
+   * authored issue collection
+   * issue states, timelines, and repository summaries
 
 Remaining milestones for the first public release:
 
-1. **Issue Contributions**
-   * authored issue collection
-   * issue states, timelines, and repository summaries
-2. **Offline Export and CLI UX**
+1. **Offline Export and CLI UX**
    * regenerate individual outputs from an existing `report.json`
    * `gitscope export` commands
    * improved progress and terminal summaries
-3. **Logging, Cache Management, and Diagnostics**
+2. **Logging, Cache Management, and Diagnostics**
    * sanitized diagnostic logging
    * cache inspection and lifecycle commands
    * verbose troubleshooting mode
-4. **CI, Documentation, and Release Readiness**
+3. **CI, Documentation, and Release Readiness**
    * automated tests, linting, typing, and package builds
    * installation, contribution, security, and architecture documentation
    * installed-wheel verification
-5. **GitScope 0.1.0 Release**
+4. **GitScope 0.1.0 Release**
    * final package metadata and version verification
    * `uv tool install` readiness
    * first public release

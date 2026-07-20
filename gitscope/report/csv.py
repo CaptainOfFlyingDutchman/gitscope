@@ -19,7 +19,10 @@ _HEADERS = (
     "repository",
     "identifier",
     "pull_request_number",
+    "issue_number",
     "title",
+    "comment_count",
+    "labels",
     "state",
     "url",
     "additions",
@@ -44,7 +47,10 @@ class ActivityRow:
     repository: str
     identifier: str
     pull_request_number: str
+    issue_number: str
     title: str
+    comment_count: str
+    labels: str
     state: str
     url: str
     additions: str
@@ -86,7 +92,10 @@ def _activity_rows(report: CareerReport) -> tuple[ActivityRow, ...]:
             repository=commit.repository,
             identifier=commit.sha,
             pull_request_number="",
+            issue_number="",
             title="",
+            comment_count="",
+            labels="",
             state="",
             url="",
             additions=str(commit.additions),
@@ -107,7 +116,10 @@ def _activity_rows(report: CareerReport) -> tuple[ActivityRow, ...]:
             repository=pull_request.repository,
             identifier=pull_request.node_id,
             pull_request_number=str(pull_request.number),
+            issue_number="",
             title=pull_request.title,
+            comment_count="",
+            labels="",
             state=pull_request.state.value,
             url=pull_request.url,
             additions=str(pull_request.additions),
@@ -128,7 +140,10 @@ def _activity_rows(report: CareerReport) -> tuple[ActivityRow, ...]:
             repository=review.repository,
             identifier=review.node_id,
             pull_request_number=str(review.pull_request_number),
+            issue_number="",
             title=review.pull_request_title,
+            comment_count="",
+            labels="",
             state=review.state.value,
             url=review.url,
             additions="",
@@ -140,7 +155,31 @@ def _activity_rows(report: CareerReport) -> tuple[ActivityRow, ...]:
         )
         for review in report.reviews
     )
-    return (*commits, *pull_requests, *reviews)
+    issues = tuple(
+        ActivityRow(
+            *shared,
+            record_type="issue",
+            occurred_at=issue.created_at.isoformat(),
+            updated_at=issue.updated_at.isoformat(),
+            repository=issue.repository,
+            identifier=issue.node_id,
+            pull_request_number="",
+            issue_number=str(issue.number),
+            title=issue.title,
+            comment_count=str(issue.comment_count),
+            labels=", ".join(issue.labels),
+            state=issue.state.value,
+            url=issue.url,
+            additions="",
+            deletions="",
+            files_changed="",
+            commit_count="",
+            is_merge="",
+            is_draft="",
+        )
+        for issue in report.issues
+    )
+    return (*commits, *pull_requests, *issues, *reviews)
 
 
 def _safe_cell(value: str) -> str:

@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from gitscope.models.commit import CommitContribution
+from gitscope.models.issue import Issue
 from gitscope.models.pull_request import PullRequest, PullRequestState
 from gitscope.models.repository import RepositoryVisibility
 from gitscope.models.review import PullRequestReview
@@ -69,7 +70,7 @@ class PullRequestSummary(ReportModel):
     merge_rate: float | None
     average_merge_time_hours: float | None = None
     median_merge_time_hours: float | None = None
-    by_repository: dict[str, int] = {}
+    by_repository: dict[str, int] = Field(default_factory=dict)
     largest_by_changes: tuple[PullRequestInsight, ...] = ()
     largest_by_files: tuple[PullRequestInsight, ...] = ()
     longest_running: tuple[PullRequestInsight, ...] = ()
@@ -84,6 +85,19 @@ class ReviewSummary(ReportModel):
     changes_requested: int
     comments: int
     dismissed: int
+
+
+class IssueSummary(ReportModel):
+    """Aggregate authored-issue lifecycle metrics."""
+
+    total: int = 0
+    open: int = 0
+    closed: int = 0
+    closure_rate: float | None = None
+    average_close_time_hours: float | None = None
+    median_close_time_hours: float | None = None
+    total_comments: int = 0
+    by_repository: dict[str, int] = Field(default_factory=dict)
 
 
 class CommitSummary(ReportModel):
@@ -117,6 +131,7 @@ class RepositoryContributionSummary(ReportModel):
     files_changed: int
     first_contribution: datetime | None
     last_contribution: datetime | None
+    issues: int = 0
 
 
 class CodeChangeBreakdown(ReportModel):
@@ -144,6 +159,7 @@ class ActivityPeriod(ReportModel):
     pull_requests: int
     reviews: int
     total: int
+    issues: int = 0
 
 
 class CareerMilestone(ReportModel):
@@ -151,7 +167,7 @@ class CareerMilestone(ReportModel):
 
     key: str
     label: str
-    activity_type: Literal["commit", "pull_request", "review", "contribution"]
+    activity_type: Literal["commit", "pull_request", "review", "issue", "contribution"]
     occurred_at: datetime
     repository: str
     sequence: int | None = None
@@ -189,7 +205,7 @@ class CollectionMetadata(ReportModel):
 class CareerReport(ReportModel):
     """Stable, versioned JSON representation of collected GitScope data."""
 
-    schema_version: Literal["1.3", "1.4"] = "1.4"
+    schema_version: Literal["1.3", "1.4", "1.5"] = "1.5"
     organization: str
     identity: ReportIdentity
     collection: CollectionMetadata
@@ -203,3 +219,5 @@ class CareerReport(ReportModel):
     pull_requests: tuple[PullRequest, ...]
     reviews: tuple[PullRequestReview, ...]
     commits: tuple[CommitContribution, ...]
+    issue_summary: IssueSummary = Field(default_factory=IssueSummary)
+    issues: tuple[Issue, ...] = ()

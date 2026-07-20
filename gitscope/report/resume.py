@@ -20,6 +20,8 @@ _MILESTONE_PRIORITY = {
     "commit_1000",
     "first_merged_pull_request",
     "pull_request_100",
+    "first_issue",
+    "issue_100",
     "review_1000",
     "review_2500",
     "last_contribution",
@@ -99,6 +101,7 @@ def build_resume_document(report: CareerReport, profile: ResumeProfile) -> Resum
     commits = report.commit_summary
     pull_requests = report.pull_request_summary
     reviews = report.review_summary
+    issues = report.issue_summary
     technologies = tuple(
         _RESUME_TECHNOLOGY_LABELS.get(item.name, item.name)
         for item in report.language_summary.contributed_languages
@@ -110,22 +113,26 @@ def build_resume_document(report: CareerReport, profile: ResumeProfile) -> Resum
         if technologies
         else ""
     )
+    issue_clause = f"{issues.total:,} authored issues, " if issues.total else ""
     summary = (
         f"{profile.title} at {profile.company} with a documented engineering contribution "
         f"history across {report.collection.repository_count:,} repositories in "
         f"{report.organization}. The collected record spans {period} and includes "
         f"{commits.total:,} authored commits, {pull_requests.total:,} authored pull requests, "
-        f"and {reviews.total:,} submitted code reviews.{technology_clause}"
+        f"{issue_clause}and {reviews.total:,} submitted code reviews."
+        f"{technology_clause}"
     )
+    issue_delivery = ", issue reporting" if issues.total else ""
     linkedin_summary = (
         f"I am a {profile.title} at {profile.company}. My GitScope contribution record spans "
         f"{period} across {report.collection.repository_count:,} repositories, covering "
-        f"hands-on implementation, pull request delivery, and sustained peer review."
+        f"hands-on implementation, pull request delivery{issue_delivery}, and sustained peer "
+        f"review."
         f"{technology_clause} These figures document the collected scope and are not used as "
         "productivity scores."
     )
     highlights = _highlights(report, technologies, period)
-    metrics = (
+    metrics = [
         ResumeMetric(
             label="Repositories",
             value=f"{report.collection.repository_count:,}",
@@ -141,11 +148,21 @@ def build_resume_document(report: CareerReport, profile: ResumeProfile) -> Resum
             value=f"{pull_requests.total:,}",
             context=f"{pull_requests.merged:,} merged",
         ),
+    ]
+    if issues.total:
+        metrics.append(
+            ResumeMetric(
+                label="Authored issues",
+                value=f"{issues.total:,}",
+                context=f"{issues.closed:,} closed",
+            )
+        )
+    metrics.append(
         ResumeMetric(
             label="Code reviews",
             value=f"{reviews.total:,}",
             context=f"{reviews.approvals:,} approvals",
-        ),
+        )
     )
     milestones = tuple(
         ResumeMilestone(label=item.label, occurred_at=item.occurred_at)
@@ -165,7 +182,7 @@ def build_resume_document(report: CareerReport, profile: ResumeProfile) -> Resum
         linkedin_summary=linkedin_summary,
         highlights=highlights,
         technologies=technologies,
-        metrics=metrics,
+        metrics=tuple(metrics),
         milestones=milestones,
         generated_at=report.collection.generated_at,
     )
@@ -233,6 +250,7 @@ def _highlights(
     commits = report.commit_summary
     pull_requests = report.pull_request_summary
     reviews = report.review_summary
+    issues = report.issue_summary
     highlights = [
         (
             f"Documented contributions across {report.collection.repository_count:,} "
@@ -255,6 +273,11 @@ def _highlights(
             f"Submitted {reviews.total:,} peer code reviews, including "
             f"{reviews.approvals:,} approvals and {reviews.changes_requested:,} requests "
             "for changes."
+        )
+    if issues.total:
+        highlights.append(
+            f"Authored {issues.total:,} issues; {issues.closed:,} closed with "
+            f"{issues.total_comments:,} discussion comments."
         )
     if technologies:
         highlights.append(

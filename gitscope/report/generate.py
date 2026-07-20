@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from gitscope.analytics.commits import summarize_commits
+from gitscope.analytics.issues import summarize_issues
 from gitscope.analytics.prs import summarize_pull_requests
 from gitscope.analytics.repositories import summarize_languages, summarize_repositories
 from gitscope.analytics.reviews import summarize_reviews
@@ -20,6 +21,7 @@ from gitscope.github.collection import CollectionStats
 from gitscope.github.discovery import DiscoveryContext, discover_repositories
 from gitscope.github.graphql import GitHubGraphQLClient
 from gitscope.github.http import GitHubHTTPClient
+from gitscope.github.issues import IssueCollector
 from gitscope.github.prs import PullRequestCollector
 from gitscope.github.reviews import ReviewCollector
 from gitscope.models.report import (
@@ -77,6 +79,16 @@ async def generate_career_report(
             refresh=refresh,
         )
         stats.merge(pull_request_collection.stats)
+        issue_collection = await IssueCollector(
+            graphql,
+            rate_limit_reserve=rate_limit_reserve,
+        ).collect(
+            settings.organization,
+            repository_scope.names,
+            settings.username,
+            refresh=refresh,
+        )
+        stats.merge(issue_collection.stats)
         review_collection = await ReviewCollector(
             graphql,
             rate_limit_reserve=rate_limit_reserve,
@@ -146,6 +158,7 @@ async def generate_career_report(
             git_collection.repository_analyses,
             pull_request_collection.pull_requests,
             review_collection.reviews,
+            issue_collection.issues,
         ),
         language_summary=summarize_languages(
             report_repositories,
@@ -155,6 +168,7 @@ async def generate_career_report(
             git_collection.commits,
             pull_request_collection.pull_requests,
             review_collection.reviews,
+            issue_collection.issues,
         ),
         commit_summary=summarize_commits(git_collection.commits),
         pull_request_summary=summarize_pull_requests(
@@ -162,9 +176,11 @@ async def generate_career_report(
             as_of=generated_at,
         ),
         review_summary=summarize_reviews(review_collection.reviews),
+        issue_summary=summarize_issues(issue_collection.issues),
         pull_requests=pull_request_collection.pull_requests,
         reviews=review_collection.reviews,
         commits=git_collection.commits,
+        issues=issue_collection.issues,
     )
     path = write_json_report(report, settings.output_directory)
     chart_paths = write_chart_bundle(report, settings.output_directory / "charts")

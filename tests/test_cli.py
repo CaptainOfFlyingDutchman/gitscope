@@ -208,9 +208,10 @@ def test_analyze_generates_report(
     assert result.exit_code == 0
     assert "Authenticated as octocat" in result.stdout
     assert "Validated 0 allowlisted repositories in josys-src" in result.stdout
-    assert "Collected 0 authored commits, 0 authored pull requests, and 0 submitted reviews" in (
-        result.stdout
-    )
+    assert "Collected 0 authored commits" in result.stdout
+    assert "0 authored pull requests" in result.stdout
+    assert "0 authored issues" in result.stdout
+    assert "submitted reviews" in result.stdout
     assert "0 inferred languages" in result.stdout
     assert "0 days with 0 career milestones" in result.stdout
     assert "Wrote 0 interactive charts" in result.stdout

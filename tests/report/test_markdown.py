@@ -26,6 +26,8 @@ def test_write_markdown_report_is_private_complete_and_portable(tmp_path: Path) 
     assert "## Contribution overview" in markdown
     assert "## Repository contributions" in markdown
     assert "## Career milestones" in markdown
+    assert "## Issue outcomes" in markdown
+    assert "## Recently updated issues" in markdown
     assert "not productivity metrics" in markdown
     assert "[Open the interactive HTML dashboard](report.html)" in markdown
     assert "[Manvendra Singh](https://www.manvendrask.com/about)" in markdown

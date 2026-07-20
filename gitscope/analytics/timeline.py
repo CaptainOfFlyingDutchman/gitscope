@@ -8,11 +8,12 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from gitscope.models.commit import CommitContribution
+from gitscope.models.issue import Issue
 from gitscope.models.pull_request import PullRequest
 from gitscope.models.report import ActivityPeriod, CareerMilestone, TimelineSummary
 from gitscope.models.review import PullRequestReview
 
-ActivityType = Literal["commit", "pull_request", "review"]
+ActivityType = Literal["commit", "pull_request", "review", "issue"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,9 +28,10 @@ def build_timeline(
     commits: tuple[CommitContribution, ...],
     pull_requests: tuple[PullRequest, ...],
     reviews: tuple[PullRequestReview, ...],
+    issues: tuple[Issue, ...] = (),
 ) -> TimelineSummary:
     """Create UTC-normalized activity periods and deterministic career milestones."""
-    events = _events(commits, pull_requests, reviews)
+    events = _events(commits, pull_requests, reviews, issues)
     if not events:
         return TimelineSummary(
             first_contribution=None,
@@ -56,7 +58,7 @@ def build_timeline(
         yearly_activity=yearly_activity,
         most_active_month=max(monthly_activity, key=lambda period: period.total),
         most_active_year=max(yearly_activity, key=lambda period: period.total),
-        milestones=_milestones(events, commits, pull_requests, reviews),
+        milestones=_milestones(events, commits, pull_requests, reviews, issues),
     )
 
 
@@ -64,6 +66,7 @@ def _events(
     commits: tuple[CommitContribution, ...],
     pull_requests: tuple[PullRequest, ...],
     reviews: tuple[PullRequestReview, ...],
+    issues: tuple[Issue, ...],
 ) -> tuple[_ActivityEvent, ...]:
     events = [
         _ActivityEvent(_utc(commit.authored_at), "commit", commit.repository, commit.sha)
@@ -86,6 +89,10 @@ def _events(
             review.node_id,
         )
         for review in reviews
+    )
+    events.extend(
+        _ActivityEvent(_utc(issue.created_at), "issue", issue.repository, issue.node_id)
+        for issue in issues
     )
     return tuple(
         sorted(
@@ -130,7 +137,7 @@ def _period_totals(
     period_format: str,
 ) -> defaultdict[str, dict[ActivityType, int]]:
     totals: defaultdict[str, dict[ActivityType, int]] = defaultdict(
-        lambda: {"commit": 0, "pull_request": 0, "review": 0}
+        lambda: {"commit": 0, "pull_request": 0, "review": 0, "issue": 0}
     )
     for event in events:
         totals[event.occurred_at.strftime(period_format)][event.activity_type] += 1
@@ -141,12 +148,14 @@ def _activity_period(period: str, totals: dict[ActivityType, int]) -> ActivityPe
     commits = totals["commit"]
     pull_requests = totals["pull_request"]
     reviews = totals["review"]
+    issues = totals["issue"]
     return ActivityPeriod(
         period=period,
         commits=commits,
         pull_requests=pull_requests,
         reviews=reviews,
-        total=commits + pull_requests + reviews,
+        total=commits + pull_requests + reviews + issues,
+        issues=issues,
     )
 
 
@@ -155,6 +164,7 @@ def _milestones(
     commits: tuple[CommitContribution, ...],
     pull_requests: tuple[PullRequest, ...],
     reviews: tuple[PullRequestReview, ...],
+    issues: tuple[Issue, ...],
 ) -> tuple[CareerMilestone, ...]:
     ordered_commits = sorted(commits, key=lambda item: (_utc(item.authored_at), item.sha))
     ordered_pull_requests = sorted(
@@ -168,6 +178,10 @@ def _milestones(
             item.repository,
             item.node_id,
         ),
+    )
+    ordered_issues = sorted(
+        issues,
+        key=lambda item: (_utc(item.created_at), item.repository, item.number),
     )
     milestones = [
         CareerMilestone(
@@ -229,6 +243,24 @@ def _milestones(
         thresholds=(100, 500, 1000, 2500),
         activity_type="review",
     )
+    if ordered_issues:
+        first_issue = ordered_issues[0]
+        milestones.append(
+            CareerMilestone(
+                key="first_issue",
+                label="First authored issue",
+                activity_type="issue",
+                occurred_at=_utc(first_issue.created_at),
+                repository=first_issue.repository,
+                sequence=1,
+            )
+        )
+    _append_sequence_milestones(
+        milestones,
+        ordered_issues,
+        thresholds=(100,),
+        activity_type="issue",
+    )
     milestones.append(
         CareerMilestone(
             key="last_contribution",
@@ -243,7 +275,7 @@ def _milestones(
 
 def _append_sequence_milestones(
     milestones: list[CareerMilestone],
-    items: list[CommitContribution] | list[PullRequest] | list[PullRequestReview],
+    items: list[CommitContribution] | list[PullRequest] | list[PullRequestReview] | list[Issue],
     *,
     thresholds: tuple[int, ...],
     activity_type: ActivityType,
@@ -255,7 +287,7 @@ def _append_sequence_milestones(
         if isinstance(item, CommitContribution):
             occurred_at = item.authored_at
             repository = item.repository
-        elif isinstance(item, PullRequest):
+        elif isinstance(item, (PullRequest, Issue)):
             occurred_at = item.created_at
             repository = item.repository
         else:
