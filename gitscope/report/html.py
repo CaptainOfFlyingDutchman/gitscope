@@ -130,6 +130,8 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
 
     stylesheet = (_TEMPLATE_DIRECTORY / "styles.css").read_text(encoding="utf-8")
     _write_private_text(output_directory / "styles.css", stylesheet)
+    theme_script = (_TEMPLATE_DIRECTORY / "theme.js").read_text(encoding="utf-8")
+    _write_private_text(output_directory / "theme.js", theme_script)
     path = output_directory / "report.html"
     _write_private_text(path, html)
     return path

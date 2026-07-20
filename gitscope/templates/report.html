@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <meta name="description" content="GitScope engineering contribution report for {{ report.identity.username }} at {{ report.organization }}.">
   <title>{{ report.identity.username }} · GitScope Career Report</title>
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
   <script charset="utf-8" src="charts/plotly.min.js"></script>
 </head>
@@ -13,7 +14,14 @@
   <a class="skip-link" href="#main-content">Skip to report</a>
   <header class="hero">
     <div class="hero__inner">
-      <div class="brand"><span class="brand__mark" aria-hidden="true">G</span> GitScope</div>
+      <div class="hero__topline">
+        <div class="brand"><span class="brand__mark" aria-hidden="true">G</span> GitScope</div>
+        <button id="theme-toggle" class="theme-toggle" type="button" role="switch" aria-checked="false" aria-label="Dark theme">
+          <span aria-hidden="true">☀️</span>
+          <span class="theme-toggle__track" aria-hidden="true"><span class="theme-toggle__thumb"></span></span>
+          <span aria-hidden="true">🌙</span>
+        </button>
+      </div>
       <div class="hero__copy">
         <p class="eyebrow">Engineering contribution report</p>
         <h1>{{ report.identity.username }}</h1>

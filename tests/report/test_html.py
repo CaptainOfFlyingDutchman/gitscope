@@ -70,14 +70,23 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
 
     assert path == output_directory / "report.html"
     assert (output_directory / "styles.css").exists()
+    assert (output_directory / "theme.js").exists()
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert stat.S_IMODE((output_directory / "styles.css").stat().st_mode) == 0o600
+    assert stat.S_IMODE((output_directory / "theme.js").stat().st_mode) == 0o600
     assert "Contribution overview" in html
     assert "Contribution heatmap" in html
     assert "Made with care and" in html
     assert "Manvendra Singh" in html
     assert 'href="https://www.manvendrask.com/about"' in html
+    assert 'id="theme-toggle"' in html
+    assert 'role="switch"' in html
+    assert 'src="theme.js"' in html
+    theme_script = (output_directory / "theme.js").read_text(encoding="utf-8")
+    assert "prefers-color-scheme: dark" in theme_script
+    assert "localStorage" in theme_script
+    assert "Plotly.relayout" in theme_script
     assert "Repository Contribution Rankings" in html
     assert 'class="chart-card chart-card--wide"' in html
     commit_pattern_card = html.split('aria-label="Authored commit patterns', maxsplit=1)[0]
