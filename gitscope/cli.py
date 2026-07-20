@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Annotated
 
@@ -11,6 +12,8 @@ from rich.console import Console
 
 from gitscope import __version__
 from gitscope.config import ConfigurationError, Settings
+from gitscope.github.discovery import discover_repositories
+from gitscope.github.errors import GitHubError
 
 app = typer.Typer(
     name="gitscope",
@@ -46,8 +49,12 @@ def analyze(
         Path,
         typer.Option("--output", "-o", help="Directory for generated report files."),
     ] = Path("career-report"),
+    refresh: Annotated[
+        bool,
+        typer.Option("--refresh", help="Ignore cached GitHub responses."),
+    ] = False,
 ) -> None:
-    """Analyze a user's contributions within one GitHub organization."""
+    """Validate access and discover repositories for an organization analysis."""
     load_dotenv()
     try:
         settings = Settings.from_environment(
@@ -59,8 +66,25 @@ def analyze(
         error_console.print(f"[bold red]Configuration error:[/bold red] {exc}")
         raise typer.Exit(code=2) from exc
 
+    try:
+        with console.status("Connecting to GitHub..."):
+            context = asyncio.run(discover_repositories(settings, refresh=refresh))
+    except GitHubError as exc:
+        error_console.print(f"[bold red]GitHub error:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    repository_count = len(context.discovery.repositories)
+    private_count = sum(repository.is_private for repository in context.discovery.repositories)
     console.print(
-        "[green]Configuration valid.[/green] "
-        f"Ready to analyze [bold]{settings.username}[/bold] in "
-        f"[bold]{settings.organization}[/bold]."
+        f"[green]Authenticated as[/green] [bold]{context.authenticated_user.login}[/bold]."
     )
+    console.print(
+        f"Found [bold]{repository_count}[/bold] visible repositories in "
+        f"[bold]{settings.organization}[/bold] "
+        f"([bold]{private_count}[/bold] private) via {context.discovery.source}."
+    )
+    if context.discovery.rate_limit:
+        console.print(
+            f"GraphQL rate limit remaining: "
+            f"[bold]{context.discovery.rate_limit.remaining:,}[/bold]."
+        )

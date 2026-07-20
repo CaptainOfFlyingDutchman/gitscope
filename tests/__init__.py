@@ -1,0 +1,1 @@
+"""GitScope test suite."""
