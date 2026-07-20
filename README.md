@@ -6,6 +6,8 @@ GitScope is a modern Python CLI that analyzes a developer's contributions across
 
 The project is intended to be open source and usable by anyone—not tied to a specific organization.
 
+Documentation: [installation](docs/installation.md) · [contributing](CONTRIBUTING.md) · [security](SECURITY.md) · [architecture](docs/architecture.md)
+
 ---
 
 # Vision
@@ -76,7 +78,7 @@ GitHub APIs:
 
 Git:
 
-* GitPython or native git subprocesses where faster
+* native Git subprocesses
 
 Charts:
 
@@ -108,43 +110,56 @@ Type checking:
 
 ---
 
+# Installation and Quick Start
+
+GitScope requires Python 3.13 or newer, Git, and
+[uv](https://docs.astral.sh/uv/). Until the first public package is released,
+run it from a source checkout:
+
+```bash
+git clone https://github.com/CaptainOfFlyingDutchman/gitscope.git
+cd gitscope
+uv sync --all-groups
+uv run gitscope --help
+```
+
+Once published, the recommended isolated installation will be:
+
+```bash
+uv tool install gitscope
+gitscope --version
+```
+
+Configure a GitHub token and private analysis scope:
+
+```bash
+cp .env.example .env
+cp .gitscope-repositories.example .gitscope-repositories
+cp .gitscope-identities.example .gitscope-identities
+```
+
+Then run:
+
+```bash
+uv run gitscope analyze --org my-org --user my-user
+```
+
+See the [installation guide](docs/installation.md) for token, repository-scope,
+identity-alias, local-wheel, privacy, and troubleshooting guidance.
+
 # Development Workflow
 
-Initialize project
-
 ```bash
-uv init gitscope
-```
-
-Create virtual environment
-
-```bash
-uv venv
-```
-
-Run project
-
-```bash
-uv run gitscope --org my-org --user my-user
-```
-
-Run tests
-
-```bash
+uv sync --all-groups
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy gitscope scripts
 uv run pytest
+uv build
 ```
 
-Lint
-
-```bash
-uv run ruff check
-```
-
-Format
-
-```bash
-uv run ruff format
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for fixtures, dependency changes, report
+schema compatibility, pull requests, and distribution verification.
 
 ---
 
@@ -154,11 +169,20 @@ uv run ruff format
 gitscope/
 
 ├── README.md
+├── CONTRIBUTING.md
+├── SECURITY.md
 ├── pyproject.toml
 ├── uv.lock
 ├── .python-version
 ├── LICENSE
 ├── .gitignore
+├── .github/workflows/ci.yml
+├── docs/
+│   ├── architecture.md
+│   └── installation.md
+├── scripts/
+│   ├── smoke_test_wheel.py
+│   └── verify_wheel.py
 
 ├── gitscope/
 │
@@ -177,6 +201,7 @@ gitscope/
 │   ├── git/
 │   │     clone.py
 │   │     commits.py
+│   │     identities.py
 │   │     languages.py
 │   │     stats.py
 │   │
@@ -206,10 +231,11 @@ gitscope/
 │   │
 │   ├── templates/
 │   │     report.html
+│   │     resume.html
 │   │     styles.css
 │   │
 │   └── models/
-│         issue.py
+│         report.py
 │
 └── tests/
 ```
@@ -657,14 +683,14 @@ Completed:
    * `gitscope cache status|path|clear`
    * local-only `gitscope doctor` health checks
    * global sanitized `--verbose` troubleshooting
-
-Remaining milestones for the first public release:
-
-1. **CI, Documentation, and Release Readiness**
+* **CI, Documentation, and Release Readiness**
    * automated tests, linting, typing, and package builds
    * installation, contribution, security, and architecture documentation
    * installed-wheel verification
-2. **GitScope 0.1.0 Release**
+
+Remaining milestone for the first public release:
+
+1. **GitScope 0.1.0 Release**
    * final package metadata and version verification
    * `uv tool install` readiness
    * first public release

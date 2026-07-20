@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 .venv/
+.wheel-venv/
 .gitscope/
 .gitscope-repositories
 .gitscope-identities

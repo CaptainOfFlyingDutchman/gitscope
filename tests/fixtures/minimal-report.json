@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.5",
+  "organization": "example-org",
+  "identity": {
+    "username": "octocat",
+    "authenticated_as": "octocat"
+  },
+  "collection": {
+    "generated_at": "2026-07-20T00:00:00Z",
+    "repository_scope_file": ".gitscope-repositories",
+    "repository_count": 0,
+    "github_api_requests": 0,
+    "github_cache_hits": 0,
+    "git_repositories_processed": 0,
+    "git_repositories_failed": 0,
+    "graphql_rate_limit_remaining": null,
+    "graphql_rate_limit_reset_at": null,
+    "warnings": []
+  },
+  "repositories": [],
+  "commit_summary": {
+    "total": 0,
+    "additions": 0,
+    "deletions": 0,
+    "files_changed": 0,
+    "merge_commits": 0,
+    "first_contribution": null,
+    "last_contribution": null,
+    "by_repository": {},
+    "by_year": {},
+    "by_month": {},
+    "by_weekday": {},
+    "by_hour": {}
+  },
+  "repository_analytics": [],
+  "language_summary": {
+    "primary_repository_languages": {},
+    "contributed_languages": [],
+    "file_extensions": []
+  },
+  "timeline": {
+    "first_contribution": null,
+    "last_contribution": null,
+    "career_span_days": 0,
+    "active_days": 0,
+    "monthly_activity": [],
+    "yearly_activity": [],
+    "most_active_month": null,
+    "most_active_year": null,
+    "milestones": []
+  },
+  "pull_request_summary": {
+    "total": 0,
+    "open": 0,
+    "closed": 0,
+    "merged": 0,
+    "drafts": 0,
+    "merge_rate": null,
+    "average_merge_time_hours": null,
+    "median_merge_time_hours": null,
+    "by_repository": {},
+    "largest_by_changes": [],
+    "largest_by_files": [],
+    "longest_running": [],
+    "oldest_open": []
+  },
+  "review_summary": {
+    "total": 0,
+    "approvals": 0,
+    "changes_requested": 0,
+    "comments": 0,
+    "dismissed": 0
+  },
+  "pull_requests": [],
+  "reviews": [],
+  "commits": [],
+  "issue_summary": {
+    "total": 0,
+    "open": 0,
+    "closed": 0,
+    "closure_rate": null,
+    "average_close_time_hours": null,
+    "median_close_time_hours": null,
+    "total_comments": 0,
+    "by_repository": {}
+  },
+  "issues": []
+}
