@@ -31,9 +31,7 @@ _PLOTLY_SCRIPT = "plotly.min.js"
 
 def write_chart_bundle(report: CareerReport, output_directory: Path) -> tuple[Path, ...]:
     """Write private, offline, standalone chart pages with one shared Plotly runtime."""
-    output_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-    os.chmod(output_directory, 0o700)
-    _write_private_text(output_directory / _PLOTLY_SCRIPT, get_plotlyjs())
+    write_plotly_runtime(output_directory)
 
     paths: list[Path] = []
     for slug, figure in build_chart_figures(report):
@@ -57,6 +55,15 @@ def write_chart_bundle(report: CareerReport, output_directory: Path) -> tuple[Pa
         _write_private_text(path, html)
         paths.append(path)
     return tuple(paths)
+
+
+def write_plotly_runtime(output_directory: Path) -> Path:
+    """Write the shared private Plotly runtime required by offline HTML outputs."""
+    output_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(output_directory, 0o700)
+    path = output_directory / _PLOTLY_SCRIPT
+    _write_private_text(path, get_plotlyjs())
+    return path
 
 
 def build_chart_figures(report: CareerReport) -> tuple[tuple[str, Figure], ...]:

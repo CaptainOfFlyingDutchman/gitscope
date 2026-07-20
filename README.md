@@ -197,6 +197,7 @@ gitscope/
 │   │     timeline.py
 │   │
 │   ├── report/
+│   │     export.py
 │   │     html.py
 │   │     markdown.py
 │   │     csv.py
@@ -393,6 +394,34 @@ Machine-readable output for integrations.
 
 ---
 
+# Offline Export
+
+Regenerate any derived output from an existing `report.json` without a GitHub
+token, network request, repository clone, or cache dependency:
+
+```bash
+gitscope export html
+gitscope export markdown
+gitscope export csv
+gitscope export charts
+gitscope export all
+```
+
+By default, these commands read `career-report/report.json` and write beside it.
+Use a different source or destination when needed:
+
+```bash
+gitscope export all \
+  --report archive/report.json \
+  --output regenerated-report
+```
+
+The HTML command also writes its local Plotly runtime, so the regenerated
+dashboard remains offline and portable. The charts command writes every
+standalone interactive chart. The source JSON is validated but never modified.
+
+---
+
 # Resume Mode
 
 Generate synchronized Markdown and HTML contribution résumés from an existing
@@ -565,22 +594,22 @@ Completed:
 * **Issue Contributions**
    * authored issue collection
    * issue states, timelines, and repository summaries
+* **Offline Export and CLI UX**
+   * selective and complete regeneration from an existing `report.json`
+   * `gitscope export html|markdown|csv|charts|all`
+   * clearer contribution and output summaries in the terminal
 
 Remaining milestones for the first public release:
 
-1. **Offline Export and CLI UX**
-   * regenerate individual outputs from an existing `report.json`
-   * `gitscope export` commands
-   * improved progress and terminal summaries
-2. **Logging, Cache Management, and Diagnostics**
+1. **Logging, Cache Management, and Diagnostics**
    * sanitized diagnostic logging
    * cache inspection and lifecycle commands
    * verbose troubleshooting mode
-3. **CI, Documentation, and Release Readiness**
+2. **CI, Documentation, and Release Readiness**
    * automated tests, linting, typing, and package builds
    * installation, contribution, security, and architecture documentation
    * installed-wheel verification
-4. **GitScope 0.1.0 Release**
+3. **GitScope 0.1.0 Release**
    * final package metadata and version verification
    * `uv tool install` readiness
    * first public release

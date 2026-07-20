@@ -74,6 +74,45 @@ def test_resume_reports_missing_json(tmp_path: Path) -> None:
     assert "Resume error" in result.stderr
 
 
+def test_export_html_regenerates_dashboard_without_credentials(tmp_path: Path) -> None:
+    from tests.report.test_json import empty_report
+
+    report_path = tmp_path / "source" / "report.json"
+    report_path.parent.mkdir()
+    report_path.write_text(empty_report().model_dump_json(), encoding="utf-8")
+    output_directory = tmp_path / "exported"
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            "html",
+            "--report",
+            str(report_path),
+            "--output",
+            str(output_directory),
+        ],
+        env={"GITHUB_TOKEN": ""},
+    )
+
+    assert result.exit_code == 0
+    assert "Loaded GitScope schema 1.5" in result.stdout
+    assert "Contribution summary" in result.stdout
+    assert "no GitHub API or Git repository access" in result.stdout
+    assert (output_directory / "report.html").exists()
+    assert (output_directory / "charts" / "plotly.min.js").exists()
+
+
+def test_export_reports_missing_json(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["export", "csv", "--report", str(tmp_path / "missing.json")],
+    )
+
+    assert result.exit_code == 2
+    assert "Export error" in result.stderr
+
+
 def test_analyze_requires_token() -> None:
     result = runner.invoke(
         app,
@@ -208,10 +247,11 @@ def test_analyze_generates_report(
     assert result.exit_code == 0
     assert "Authenticated as octocat" in result.stdout
     assert "Validated 0 allowlisted repositories in josys-src" in result.stdout
-    assert "Collected 0 authored commits" in result.stdout
-    assert "0 authored pull requests" in result.stdout
-    assert "0 authored issues" in result.stdout
-    assert "submitted reviews" in result.stdout
+    assert "Contribution summary" in result.stdout
+    assert "Authored commits" in result.stdout
+    assert "Authored pull requests" in result.stdout
+    assert "Authored issues" in result.stdout
+    assert "Submitted reviews" in result.stdout
     assert "0 inferred languages" in result.stdout
     assert "0 days with 0 career milestones" in result.stdout
     assert "Wrote 0 interactive charts" in result.stdout

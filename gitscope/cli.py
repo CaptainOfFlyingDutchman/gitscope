@@ -10,11 +10,14 @@ import typer
 from dotenv import load_dotenv
 from pydantic import ValidationError
 from rich.console import Console
+from rich.table import Table
 
 from gitscope import __version__
 from gitscope.config import ConfigurationError, Settings
 from gitscope.git.identities import DEFAULT_IDENTITIES_FILE, IdentityFileError
 from gitscope.github.errors import GitHubError
+from gitscope.models.report import CareerReport
+from gitscope.report.export import ExportFormat, ReportExportError, export_existing_report
 from gitscope.report.generate import generate_career_report
 from gitscope.report.resume import ResumeError, generate_resume_portfolio
 from gitscope.repository_scope import (
@@ -28,6 +31,11 @@ app = typer.Typer(
     help="Generate an engineering career report from a GitHub organization.",
     no_args_is_help=True,
 )
+export_app = typer.Typer(
+    help="Regenerate report outputs locally from an existing report.json.",
+    no_args_is_help=True,
+)
+app.add_typer(export_app, name="export")
 console = Console()
 error_console = Console(stderr=True)
 
@@ -135,12 +143,7 @@ def analyze(
         f"([bold]{private_count}[/bold] private)."
     )
     console.print(f"Source: {context.discovery.source.replace('-', ' ')}.")
-    console.print(
-        f"Collected [bold]{report.commit_summary.total}[/bold] authored commits, "
-        f"[bold]{report.pull_request_summary.total}[/bold] authored pull requests, "
-        f"[bold]{report.issue_summary.total}[/bold] authored issues, and "
-        f"[bold]{report.review_summary.total}[/bold] submitted reviews."
-    )
+    _print_contribution_summary(report)
     console.print(
         f"Classified contributed changes across "
         f"[bold]{len(report.language_summary.contributed_languages)}[/bold] inferred languages "
@@ -172,6 +175,136 @@ def analyze(
     if generated.csv_path is not None:
         console.print(f"[green]Wrote[/green] CSV export [bold]{generated.csv_path}[/bold].")
     console.print(f"[green]Wrote[/green] [bold]{generated.path}[/bold].")
+
+
+@export_app.command("html")
+def export_html(
+    report_path: Annotated[
+        Path,
+        typer.Option("--report", help="Existing GitScope report.json."),
+    ] = Path("career-report/report.json"),
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Directory for regenerated output files."),
+    ] = None,
+) -> None:
+    """Regenerate the offline HTML dashboard and its local runtime."""
+    _run_offline_export(report_path, output, ("html",))
+
+
+@export_app.command("markdown")
+def export_markdown(
+    report_path: Annotated[
+        Path,
+        typer.Option("--report", help="Existing GitScope report.json."),
+    ] = Path("career-report/report.json"),
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Directory for regenerated output files."),
+    ] = None,
+) -> None:
+    """Regenerate the portable Markdown report."""
+    _run_offline_export(report_path, output, ("markdown",))
+
+
+@export_app.command("csv")
+def export_csv(
+    report_path: Annotated[
+        Path,
+        typer.Option("--report", help="Existing GitScope report.json."),
+    ] = Path("career-report/report.json"),
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Directory for regenerated output files."),
+    ] = None,
+) -> None:
+    """Regenerate the spreadsheet-friendly CSV ledger."""
+    _run_offline_export(report_path, output, ("csv",))
+
+
+@export_app.command("charts")
+def export_charts(
+    report_path: Annotated[
+        Path,
+        typer.Option("--report", help="Existing GitScope report.json."),
+    ] = Path("career-report/report.json"),
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Directory for regenerated output files."),
+    ] = None,
+) -> None:
+    """Regenerate every standalone interactive chart."""
+    _run_offline_export(report_path, output, ("charts",))
+
+
+@export_app.command("all")
+def export_all(
+    report_path: Annotated[
+        Path,
+        typer.Option("--report", help="Existing GitScope report.json."),
+    ] = Path("career-report/report.json"),
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Directory for regenerated output files."),
+    ] = None,
+) -> None:
+    """Regenerate HTML, Markdown, CSV, and all chart pages."""
+    _run_offline_export(report_path, output, ("charts", "html", "markdown", "csv"))
+
+
+def _run_offline_export(
+    report_path: Path,
+    output: Path | None,
+    formats: tuple[ExportFormat, ...],
+) -> None:
+    try:
+        with console.status("Regenerating report outputs locally..."):
+            exported = export_existing_report(
+                report_path,
+                output,
+                formats=formats,
+            )
+    except ReportExportError as exc:
+        error_console.print(f"[bold red]Export error:[/bold red] {exc}")
+        raise typer.Exit(code=2) from exc
+
+    report = exported.report
+    console.print(
+        f"Loaded GitScope schema [bold]{report.schema_version}[/bold] for "
+        f"[bold]{report.identity.username}[/bold] in [bold]{report.organization}[/bold]."
+    )
+    _print_contribution_summary(report)
+    chart_paths = tuple(path for path in exported.paths if path.parent.name == "charts")
+    if chart_paths:
+        console.print(
+            f"[green]Wrote[/green] [bold]{len(chart_paths)}[/bold] interactive charts to "
+            f"[bold]{chart_paths[0].parent}[/bold]."
+        )
+    for path in exported.paths:
+        if path in chart_paths:
+            continue
+        label = {
+            ".html": "dashboard",
+            ".md": "Markdown report",
+            ".csv": "CSV export",
+        }.get(path.suffix, "report output")
+        console.print(f"[green]Wrote[/green] {label} [bold]{path}[/bold].")
+    console.print(
+        "[dim]Offline export complete; no GitHub API or Git repository access used.[/dim]"
+    )
+
+
+def _print_contribution_summary(report: CareerReport) -> None:
+    table = Table(title="Contribution summary", show_edge=False, pad_edge=False)
+    table.add_column("Activity", style="cyan")
+    table.add_column("Count", justify="right", style="bold")
+    table.add_row("Authored commits", f"{report.commit_summary.total:,}")
+    table.add_row("Authored pull requests", f"{report.pull_request_summary.total:,}")
+    table.add_row("Authored issues", f"{report.issue_summary.total:,}")
+    table.add_row("Submitted reviews", f"{report.review_summary.total:,}")
+    table.add_row("Repositories", f"{report.collection.repository_count:,}")
+    table.add_row("Active days", f"{report.timeline.active_days:,}")
+    console.print(table)
 
 
 @app.command()
