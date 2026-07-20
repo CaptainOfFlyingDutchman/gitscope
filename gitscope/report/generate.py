@@ -8,6 +8,7 @@ from pathlib import Path
 
 from gitscope.analytics.commits import summarize_commits
 from gitscope.analytics.prs import summarize_pull_requests
+from gitscope.analytics.repositories import summarize_languages, summarize_repositories
 from gitscope.analytics.reviews import summarize_reviews
 from gitscope.cache import JsonCache
 from gitscope.config import Settings
@@ -92,6 +93,20 @@ async def generate_career_report(
         refresh=refresh,
         concurrency=git_concurrency,
     )
+    report_repositories = tuple(
+        ReportRepository(
+            name_with_owner=repository.name_with_owner,
+            url=repository.url,
+            visibility=repository.visibility,
+            is_archived=repository.is_archived,
+            is_fork=repository.is_fork,
+            default_branch=repository.default_branch,
+            primary_language=repository.primary_language,
+            stars=repository.stars,
+            forks=repository.forks,
+        )
+        for repository in context.discovery.repositories
+    )
 
     report = CareerReport(
         organization=settings.organization,
@@ -115,19 +130,16 @@ async def generate_career_report(
             ),
             warnings=tuple((*stats.warnings, *git_collection.warnings)),
         ),
-        repositories=tuple(
-            ReportRepository(
-                name_with_owner=repository.name_with_owner,
-                url=repository.url,
-                visibility=repository.visibility,
-                is_archived=repository.is_archived,
-                is_fork=repository.is_fork,
-                default_branch=repository.default_branch,
-                primary_language=repository.primary_language,
-                stars=repository.stars,
-                forks=repository.forks,
-            )
-            for repository in context.discovery.repositories
+        repositories=report_repositories,
+        repository_analytics=summarize_repositories(
+            report_repositories,
+            git_collection.repository_analyses,
+            pull_request_collection.pull_requests,
+            review_collection.reviews,
+        ),
+        language_summary=summarize_languages(
+            report_repositories,
+            git_collection.repository_analyses,
         ),
         commit_summary=summarize_commits(git_collection.commits),
         pull_request_summary=summarize_pull_requests(pull_request_collection.pull_requests),

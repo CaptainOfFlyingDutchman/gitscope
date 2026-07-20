@@ -7,6 +7,7 @@ from gitscope.git.clone import RepositoryCheckout
 from gitscope.git.collection import collect_git_contributions
 from gitscope.git.identities import AuthorIdentities
 from gitscope.git.runner import GitCommandError
+from gitscope.git.stats import RepositoryCommitAnalysis
 from gitscope.models.commit import CommitContribution
 
 
@@ -34,8 +35,8 @@ def test_collection_continues_when_one_repository_fails(
     )
     monkeypatch.setattr("gitscope.git.collection.prepare_repository", prepare)
     monkeypatch.setattr(
-        "gitscope.git.collection.collect_repository_commits",
-        lambda *_args: (commit,),
+        "gitscope.git.collection.analyze_repository_commits",
+        lambda *_args: RepositoryCommitAnalysis("org/good", (commit,), ()),
     )
 
     result = collect_git_contributions(
@@ -47,6 +48,7 @@ def test_collection_continues_when_one_repository_fails(
     )
 
     assert result.commits == (commit,)
+    assert result.repository_analyses[0].repository == "org/good"
     assert result.repositories_processed == 1
     assert result.repositories_failed == 1
     assert result.warnings == ("Could not analyze org/broken: access denied",)

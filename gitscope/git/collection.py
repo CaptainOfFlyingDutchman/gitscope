@@ -7,9 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from gitscope.git.clone import prepare_repository
-from gitscope.git.commits import collect_repository_commits
+from gitscope.git.commits import analyze_repository_commits
 from gitscope.git.identities import AuthorIdentities
 from gitscope.git.runner import GitCommandError
+from gitscope.git.stats import RepositoryCommitAnalysis
 from gitscope.models.commit import CommitContribution
 
 
@@ -18,6 +19,7 @@ class GitCollection:
     """Collected commits plus repository-level completeness metadata."""
 
     commits: tuple[CommitContribution, ...]
+    repository_analyses: tuple[RepositoryCommitAnalysis, ...]
     repositories_processed: int
     repositories_failed: int
     warnings: tuple[str, ...]
@@ -38,26 +40,31 @@ def collect_git_contributions(
     warnings: list[str] = []
     processed = 0
 
-    def inspect(repository: str) -> tuple[CommitContribution, ...]:
+    def inspect(repository: str) -> RepositoryCommitAnalysis:
         checkout = prepare_repository(repository, cache_directory, token, refresh=refresh)
-        return collect_repository_commits(repository, checkout.path, identities)
+        return analyze_repository_commits(repository, checkout.path, identities)
 
     if not repositories:
-        return GitCollection((), 0, 0, ())
+        return GitCollection((), (), 0, 0, ())
+    analyses: list[RepositoryCommitAnalysis] = []
     with ThreadPoolExecutor(max_workers=worker_count, thread_name_prefix="gitscope-git") as pool:
         futures = {pool.submit(inspect, repository): repository for repository in repositories}
         for future in as_completed(futures):
             repository = futures[future]
             try:
-                commits.extend(future.result())
+                analysis = future.result()
+                analyses.append(analysis)
+                commits.extend(analysis.commits)
                 processed += 1
             except (GitCommandError, OSError) as exc:
                 warnings.append(f"Could not analyze {repository}: {exc}")
 
     commits.sort(key=lambda commit: (commit.authored_at, commit.repository, commit.sha))
     warnings.sort()
+    analyses.sort(key=lambda analysis: analysis.repository)
     return GitCollection(
         commits=tuple(commits),
+        repository_analyses=tuple(analyses),
         repositories_processed=processed,
         repositories_failed=len(repositories) - processed,
         warnings=tuple(warnings),

@@ -3,7 +3,7 @@
 import subprocess
 from pathlib import Path
 
-from gitscope.git.commits import collect_repository_commits
+from gitscope.git.commits import analyze_repository_commits
 from gitscope.git.identities import AuthorIdentities
 
 
@@ -28,7 +28,8 @@ def test_collect_repository_commits_matches_identity_and_numstat(tmp_path: Path)
         emails=frozenset({"target@example.com"}),
     )
 
-    commits = collect_repository_commits("org/repo", tmp_path, identities)
+    analysis = analyze_repository_commits("org/repo", tmp_path, identities)
+    commits = analysis.commits
 
     assert len(commits) == 1
     assert commits[0].repository == "org/repo"
@@ -36,3 +37,7 @@ def test_collect_repository_commits_matches_identity_and_numstat(tmp_path: Path)
     assert commits[0].deletions == 0
     assert commits[0].files_changed == 1
     assert commits[0].is_merge is False
+    assert len(analysis.file_changes) == 1
+    assert analysis.file_changes[0].extension == ".txt"
+    assert analysis.file_changes[0].language == "Text"
+    assert analysis.file_changes[0].additions == 2

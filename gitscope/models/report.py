@@ -78,6 +78,39 @@ class CommitSummary(ReportModel):
     by_hour: dict[str, int]
 
 
+class RepositoryContributionSummary(ReportModel):
+    """Target-user activity and code changes within one repository."""
+
+    name_with_owner: str
+    primary_language: str | None
+    is_archived: bool
+    commits: int
+    pull_requests: int
+    reviews: int
+    additions: int
+    deletions: int
+    files_changed: int
+    first_contribution: datetime | None
+    last_contribution: datetime | None
+
+
+class CodeChangeBreakdown(ReportModel):
+    """Cumulative contributed changes grouped by a safe categorical label."""
+
+    name: str
+    additions: int
+    deletions: int
+    files_changed: int
+
+
+class LanguageSummary(ReportModel):
+    """Repository metadata languages and contribution-based file analytics."""
+
+    primary_repository_languages: dict[str, int]
+    contributed_languages: tuple[CodeChangeBreakdown, ...]
+    file_extensions: tuple[CodeChangeBreakdown, ...]
+
+
 class CollectionMetadata(ReportModel):
     """Provenance and completeness information for a report run."""
 
@@ -96,12 +129,14 @@ class CollectionMetadata(ReportModel):
 class CareerReport(ReportModel):
     """Stable, versioned JSON representation of collected GitScope data."""
 
-    schema_version: Literal["1.1"] = "1.1"
+    schema_version: Literal["1.2"] = "1.2"
     organization: str
     identity: ReportIdentity
     collection: CollectionMetadata
     repositories: tuple[ReportRepository, ...]
     commit_summary: CommitSummary
+    repository_analytics: tuple[RepositoryContributionSummary, ...]
+    language_summary: LanguageSummary
     pull_request_summary: PullRequestSummary
     review_summary: ReviewSummary
     pull_requests: tuple[PullRequest, ...]

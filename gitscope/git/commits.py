@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
 from gitscope.git.identities import AuthorIdentities
+from gitscope.git.languages import classify_file
 from gitscope.git.runner import run_git
+from gitscope.git.stats import FileChangeAggregate, RepositoryCommitAnalysis
 from gitscope.models.commit import CommitContribution
 
 _RECORD_SEPARATOR = "\x1e"
@@ -19,6 +22,15 @@ def collect_repository_commits(
     identities: AuthorIdentities,
 ) -> tuple[CommitContribution, ...]:
     """Return target-authored commits from every cached ref in one Git traversal."""
+    return analyze_repository_commits(repository, path, identities).commits
+
+
+def analyze_repository_commits(
+    repository: str,
+    path: Path,
+    identities: AuthorIdentities,
+) -> RepositoryCommitAnalysis:
+    """Return authored commits and path-free extension/language change totals."""
     output = run_git(
         [
             "log",
@@ -32,6 +44,7 @@ def collect_repository_commits(
         cwd=path,
     )
     commits: list[CommitContribution] = []
+    file_totals: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0, 0])
     for raw_record in output.split(_RECORD_SEPARATOR):
         record = raw_record.lstrip("\n")
         if not record:
@@ -43,7 +56,12 @@ def collect_repository_commits(
         sha, authored_at, author_name, author_email, parents = fields
         if not identities.matches(author_name, author_email):
             continue
-        additions, deletions, files_changed = _parse_numstat(stats)
+        additions, deletions, file_changes = _parse_numstat(stats)
+        for extension, language, added, deleted in file_changes:
+            totals = file_totals[(extension, language)]
+            totals[0] += added
+            totals[1] += deleted
+            totals[2] += 1
         commits.append(
             CommitContribution(
                 sha=sha,
@@ -51,21 +69,39 @@ def collect_repository_commits(
                 authored_at=datetime.fromisoformat(authored_at),
                 additions=additions,
                 deletions=deletions,
-                files_changed=files_changed,
+                files_changed=len(file_changes),
                 is_merge=len(parents.split()) > 1,
             )
         )
-    return tuple(commits)
+    aggregates = tuple(
+        FileChangeAggregate(
+            extension=extension,
+            language=language,
+            additions=totals[0],
+            deletions=totals[1],
+            files_changed=totals[2],
+        )
+        for (extension, language), totals in sorted(file_totals.items())
+    )
+    return RepositoryCommitAnalysis(
+        repository=repository,
+        commits=tuple(commits),
+        file_changes=aggregates,
+    )
 
 
-def _parse_numstat(stats: str) -> tuple[int, int, int]:
-    additions = deletions = files_changed = 0
+def _parse_numstat(stats: str) -> tuple[int, int, tuple[tuple[str, str, int, int], ...]]:
+    additions = deletions = 0
+    changes: list[tuple[str, str, int, int]] = []
     for line in stats.splitlines():
         fields = line.split("\t", 2)
         if len(fields) != 3:
             continue
-        added, deleted, _path = fields
-        additions += int(added) if added.isdigit() else 0
-        deletions += int(deleted) if deleted.isdigit() else 0
-        files_changed += 1
-    return additions, deletions, files_changed
+        added, deleted, path = fields
+        added_count = int(added) if added.isdigit() else 0
+        deleted_count = int(deleted) if deleted.isdigit() else 0
+        extension, language = classify_file(path)
+        additions += added_count
+        deletions += deleted_count
+        changes.append((extension, language, added_count, deleted_count))
+    return additions, deletions, tuple(changes)

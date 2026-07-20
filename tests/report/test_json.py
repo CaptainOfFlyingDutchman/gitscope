@@ -8,6 +8,7 @@ from gitscope.models.report import (
     CareerReport,
     CollectionMetadata,
     CommitSummary,
+    LanguageSummary,
     PullRequestSummary,
     ReportIdentity,
     ReviewSummary,
@@ -27,6 +28,12 @@ def empty_report() -> CareerReport:
             github_cache_hits=0,
         ),
         repositories=(),
+        repository_analytics=(),
+        language_summary=LanguageSummary(
+            primary_repository_languages={},
+            contributed_languages=(),
+            file_extensions=(),
+        ),
         commit_summary=CommitSummary(
             total=0,
             additions=0,
@@ -68,7 +75,7 @@ def test_json_report_round_trips_with_private_permissions(tmp_path: Path) -> Non
     path = write_json_report(empty_report(), output_directory)
     restored = CareerReport.model_validate_json(path.read_text(encoding="utf-8"))
 
-    assert restored.schema_version == "1.1"
+    assert restored.schema_version == "1.2"
     assert restored.organization == "josys-src"
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700
     assert stat.S_IMODE(path.stat().st_mode) == 0o600

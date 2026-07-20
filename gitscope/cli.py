@@ -138,6 +138,11 @@ def analyze(
         f"[bold]{report.pull_request_summary.total}[/bold] authored pull requests, and "
         f"[bold]{report.review_summary.total}[/bold] submitted reviews."
     )
+    console.print(
+        f"Classified contributed changes across "
+        f"[bold]{len(report.language_summary.contributed_languages)}[/bold] inferred languages "
+        f"and [bold]{len(report.language_summary.file_extensions)}[/bold] file extensions."
+    )
     if report.collection.graphql_rate_limit_remaining is not None:
         console.print(
             f"GraphQL rate limit remaining: "

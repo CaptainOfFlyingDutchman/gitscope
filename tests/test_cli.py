@@ -16,6 +16,7 @@ from gitscope.models.report import (
     CareerReport,
     CollectionMetadata,
     CommitSummary,
+    LanguageSummary,
     PullRequestSummary,
     ReportIdentity,
     ReviewSummary,
@@ -87,6 +88,12 @@ def test_analyze_generates_report(
                 graphql_rate_limit_remaining=4999,
             ),
             repositories=(),
+            repository_analytics=(),
+            language_summary=LanguageSummary(
+                primary_repository_languages={},
+                contributed_languages=(),
+                file_extensions=(),
+            ),
             commit_summary=CommitSummary(
                 total=0,
                 additions=0,
@@ -150,6 +157,7 @@ def test_analyze_generates_report(
     assert "Collected 0 authored commits, 0 authored pull requests, and 0 submitted reviews" in (
         result.stdout
     )
+    assert "0 inferred languages" in result.stdout
     assert "4,999" in result.stdout
     assert "report.json" in result.stdout
 
