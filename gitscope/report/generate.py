@@ -30,6 +30,7 @@ from gitscope.models.report import (
 )
 from gitscope.report.html import write_html_report
 from gitscope.report.json import write_json_report
+from gitscope.report.markdown import write_markdown_report
 from gitscope.repository_scope import RepositoryScope
 
 
@@ -42,6 +43,7 @@ class GeneratedCareerReport:
     discovery_context: DiscoveryContext
     chart_paths: tuple[Path, ...] = ()
     html_path: Path | None = None
+    markdown_path: Path | None = None
 
 
 async def generate_career_report(
@@ -161,12 +163,14 @@ async def generate_career_report(
     path = write_json_report(report, settings.output_directory)
     chart_paths = write_chart_bundle(report, settings.output_directory / "charts")
     html_path = write_html_report(report, settings.output_directory)
+    markdown_path = write_markdown_report(report, settings.output_directory)
     return GeneratedCareerReport(
         report=report,
         path=path,
         discovery_context=context,
         chart_paths=chart_paths,
         html_path=html_path,
+        markdown_path=markdown_path,
     )
 
 

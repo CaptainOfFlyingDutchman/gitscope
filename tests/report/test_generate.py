@@ -70,6 +70,8 @@ async def test_generate_career_report_builds_and_writes_schema(
     assert generated.path.exists()
     assert generated.html_path == tmp_path / "career-report" / "report.html"
     assert generated.html_path.exists()
+    assert generated.markdown_path == tmp_path / "career-report" / "report.md"
+    assert generated.markdown_path.exists()
     assert len(generated.chart_paths) == 10
     assert all(path.exists() for path in generated.chart_paths)
     assert generated.report.schema_version == "1.3"

@@ -162,4 +162,8 @@ def analyze(
     )
     if generated.html_path is not None:
         console.print(f"[green]Wrote[/green] dashboard [bold]{generated.html_path}[/bold].")
+    if generated.markdown_path is not None:
+        console.print(
+            f"[green]Wrote[/green] Markdown report [bold]{generated.markdown_path}[/bold]."
+        )
     console.print(f"[green]Wrote[/green] [bold]{generated.path}[/bold].")
