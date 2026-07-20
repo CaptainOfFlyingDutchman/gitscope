@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from gitscope.models.commit import CommitContribution
 from gitscope.models.pull_request import PullRequest
 from gitscope.models.repository import RepositoryVisibility
 from gitscope.models.review import PullRequestReview
@@ -60,6 +61,23 @@ class ReviewSummary(ReportModel):
     dismissed: int
 
 
+class CommitSummary(ReportModel):
+    """Aggregate authored-commit and code-change metrics."""
+
+    total: int
+    additions: int
+    deletions: int
+    files_changed: int
+    merge_commits: int
+    first_contribution: datetime | None
+    last_contribution: datetime | None
+    by_repository: dict[str, int]
+    by_year: dict[str, int]
+    by_month: dict[str, int]
+    by_weekday: dict[str, int]
+    by_hour: dict[str, int]
+
+
 class CollectionMetadata(ReportModel):
     """Provenance and completeness information for a report run."""
 
@@ -68,6 +86,8 @@ class CollectionMetadata(ReportModel):
     repository_count: int
     github_api_requests: int
     github_cache_hits: int
+    git_repositories_processed: int = 0
+    git_repositories_failed: int = 0
     graphql_rate_limit_remaining: int | None = None
     graphql_rate_limit_reset_at: datetime | None = None
     warnings: tuple[str, ...] = ()
@@ -76,12 +96,14 @@ class CollectionMetadata(ReportModel):
 class CareerReport(ReportModel):
     """Stable, versioned JSON representation of collected GitScope data."""
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.1"] = "1.1"
     organization: str
     identity: ReportIdentity
     collection: CollectionMetadata
     repositories: tuple[ReportRepository, ...]
+    commit_summary: CommitSummary
     pull_request_summary: PullRequestSummary
     review_summary: ReviewSummary
     pull_requests: tuple[PullRequest, ...]
     reviews: tuple[PullRequestReview, ...]
+    commits: tuple[CommitContribution, ...]

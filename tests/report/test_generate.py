@@ -8,6 +8,7 @@ import pytest
 import respx
 
 from gitscope.config import Settings
+from gitscope.git.collection import GitCollection
 from gitscope.report.generate import generate_career_report
 from gitscope.repository_scope import RepositoryScope
 from tests.github.test_graphql import repository_node
@@ -17,7 +18,14 @@ from tests.github.test_reviews import reviewed_search_page
 
 @pytest.mark.anyio
 @respx.mock
-async def test_generate_career_report_builds_and_writes_schema(tmp_path: Path) -> None:
+async def test_generate_career_report_builds_and_writes_schema(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "gitscope.report.generate.collect_git_contributions",
+        lambda *_args, **_kwargs: GitCollection((), 1, 0, ()),
+    )
     respx.get("https://api.github.com/user").mock(
         return_value=httpx.Response(200, json={"login": "octocat", "id": 1})
     )
@@ -60,8 +68,10 @@ async def test_generate_career_report_builds_and_writes_schema(tmp_path: Path) -
     generated = await generate_career_report(settings, scope)
 
     assert generated.path.exists()
-    assert generated.report.schema_version == "1.0"
+    assert generated.report.schema_version == "1.1"
     assert generated.report.collection.github_api_requests == 4
+    assert generated.report.collection.git_repositories_processed == 1
+    assert generated.report.commit_summary.total == 0
     assert generated.report.pull_request_summary.total == 1
     assert generated.report.review_summary.total == 1
     assert generated.report.repositories[0].name_with_owner == "josys-src/frontend"

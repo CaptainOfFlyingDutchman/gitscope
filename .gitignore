@@ -5,6 +5,7 @@
 .venv/
 .gitscope/
 .gitscope-repositories
+.gitscope-identities
 career-report/
 __pycache__/
 *.py[cod]

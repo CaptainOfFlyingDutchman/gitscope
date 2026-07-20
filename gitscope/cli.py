@@ -12,6 +12,7 @@ from rich.console import Console
 
 from gitscope import __version__
 from gitscope.config import ConfigurationError, Settings
+from gitscope.git.identities import DEFAULT_IDENTITIES_FILE, IdentityFileError
 from gitscope.github.errors import GitHubError
 from gitscope.report.generate import generate_career_report
 from gitscope.repository_scope import (
@@ -65,6 +66,22 @@ def analyze(
             help="Private allowlist containing one owner/name repository per line.",
         ),
     ] = DEFAULT_REPOSITORIES_FILE,
+    identities_file: Annotated[
+        Path,
+        typer.Option(
+            "--identities-file",
+            help="Optional private file containing historical Git author names and emails.",
+        ),
+    ] = DEFAULT_IDENTITIES_FILE,
+    git_concurrency: Annotated[
+        int,
+        typer.Option(
+            "--git-concurrency",
+            min=1,
+            max=16,
+            help="Number of repositories to clone and inspect concurrently.",
+        ),
+    ] = 4,
 ) -> None:
     """Collect scoped contributions and write a versioned JSON career report."""
     load_dotenv()
@@ -94,10 +111,13 @@ def analyze(
                     settings,
                     repository_scope,
                     refresh=refresh,
+                    identities_file=identities_file,
+                    git_concurrency=git_concurrency,
                 )
             )
-    except GitHubError as exc:
-        error_console.print(f"[bold red]GitHub error:[/bold red] {exc}")
+    except (GitHubError, IdentityFileError) as exc:
+        label = "GitHub error" if isinstance(exc, GitHubError) else "Identity file error"
+        error_console.print(f"[bold red]{label}:[/bold red] {exc}")
         raise typer.Exit(code=1) from exc
 
     report = generated.report
@@ -114,7 +134,8 @@ def analyze(
     )
     console.print(f"Source: {context.discovery.source.replace('-', ' ')}.")
     console.print(
-        f"Collected [bold]{report.pull_request_summary.total}[/bold] authored pull requests and "
+        f"Collected [bold]{report.commit_summary.total}[/bold] authored commits, "
+        f"[bold]{report.pull_request_summary.total}[/bold] authored pull requests, and "
         f"[bold]{report.review_summary.total}[/bold] submitted reviews."
     )
     if report.collection.graphql_rate_limit_remaining is not None:

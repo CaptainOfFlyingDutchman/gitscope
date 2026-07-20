@@ -7,6 +7,7 @@ from pathlib import Path
 from gitscope.models.report import (
     CareerReport,
     CollectionMetadata,
+    CommitSummary,
     PullRequestSummary,
     ReportIdentity,
     ReviewSummary,
@@ -26,6 +27,20 @@ def empty_report() -> CareerReport:
             github_cache_hits=0,
         ),
         repositories=(),
+        commit_summary=CommitSummary(
+            total=0,
+            additions=0,
+            deletions=0,
+            files_changed=0,
+            merge_commits=0,
+            first_contribution=None,
+            last_contribution=None,
+            by_repository={},
+            by_year={},
+            by_month={},
+            by_weekday={},
+            by_hour={},
+        ),
         pull_request_summary=PullRequestSummary(
             total=0,
             open=0,
@@ -43,6 +58,7 @@ def empty_report() -> CareerReport:
         ),
         pull_requests=(),
         reviews=(),
+        commits=(),
     )
 
 
@@ -52,7 +68,7 @@ def test_json_report_round_trips_with_private_permissions(tmp_path: Path) -> Non
     path = write_json_report(empty_report(), output_directory)
     restored = CareerReport.model_validate_json(path.read_text(encoding="utf-8"))
 
-    assert restored.schema_version == "1.0"
+    assert restored.schema_version == "1.1"
     assert restored.organization == "josys-src"
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700
     assert stat.S_IMODE(path.stat().st_mode) == 0o600

@@ -15,6 +15,7 @@ from gitscope.github.models import AuthenticatedUser, RateLimit, RepositoryDisco
 from gitscope.models.report import (
     CareerReport,
     CollectionMetadata,
+    CommitSummary,
     PullRequestSummary,
     ReportIdentity,
     ReviewSummary,
@@ -53,11 +54,15 @@ def test_analyze_generates_report(
         *,
         refresh: bool = False,
         rate_limit_reserve: int = 500,
+        identities_file: Path = Path(".gitscope-identities"),
+        git_concurrency: int = 4,
     ) -> GeneratedCareerReport:
         assert settings.organization == "josys-src"
         assert repository_scope.names == ("frontend",)
         assert refresh is True
         assert rate_limit_reserve == 500
+        assert identities_file == Path(".gitscope-identities")
+        assert git_concurrency == 4
         context = DiscoveryContext(
             authenticated_user=AuthenticatedUser(login="octocat", id=1),
             discovery=RepositoryDiscovery(
@@ -82,6 +87,20 @@ def test_analyze_generates_report(
                 graphql_rate_limit_remaining=4999,
             ),
             repositories=(),
+            commit_summary=CommitSummary(
+                total=0,
+                additions=0,
+                deletions=0,
+                files_changed=0,
+                merge_commits=0,
+                first_contribution=None,
+                last_contribution=None,
+                by_repository={},
+                by_year={},
+                by_month={},
+                by_weekday={},
+                by_hour={},
+            ),
             pull_request_summary=PullRequestSummary(
                 total=0,
                 open=0,
@@ -99,6 +118,7 @@ def test_analyze_generates_report(
             ),
             pull_requests=(),
             reviews=(),
+            commits=(),
         )
         return GeneratedCareerReport(
             report=report,
@@ -127,7 +147,9 @@ def test_analyze_generates_report(
     assert result.exit_code == 0
     assert "Authenticated as octocat" in result.stdout
     assert "Validated 0 allowlisted repositories in josys-src" in result.stdout
-    assert "Collected 0 authored pull requests and 0 submitted reviews" in result.stdout
+    assert "Collected 0 authored commits, 0 authored pull requests, and 0 submitted reviews" in (
+        result.stdout
+    )
     assert "4,999" in result.stdout
     assert "report.json" in result.stdout
 
@@ -142,9 +164,13 @@ def test_analyze_reports_github_error(
         *,
         refresh: bool = False,
         rate_limit_reserve: int = 500,
+        identities_file: Path = Path(".gitscope-identities"),
+        git_concurrency: int = 4,
     ) -> GeneratedCareerReport:
         del refresh
         del rate_limit_reserve
+        del identities_file
+        del git_concurrency
         raise AuthenticationError("token rejected")
 
     monkeypatch.setattr("gitscope.cli.generate_career_report", rejected_generation)

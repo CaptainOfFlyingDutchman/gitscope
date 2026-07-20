@@ -6,10 +6,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from gitscope.analytics.commits import summarize_commits
 from gitscope.analytics.prs import summarize_pull_requests
 from gitscope.analytics.reviews import summarize_reviews
 from gitscope.cache import JsonCache
 from gitscope.config import Settings
+from gitscope.git.collection import collect_git_contributions
+from gitscope.git.identities import DEFAULT_IDENTITIES_FILE, AuthorIdentities
 from gitscope.github.collection import CollectionStats
 from gitscope.github.discovery import DiscoveryContext, discover_repositories
 from gitscope.github.graphql import GitHubGraphQLClient
@@ -41,6 +44,8 @@ async def generate_career_report(
     *,
     refresh: bool = False,
     rate_limit_reserve: int = 500,
+    identities_file: Path = DEFAULT_IDENTITIES_FILE,
+    git_concurrency: int = 4,
 ) -> GeneratedCareerReport:
     """Collect scoped GitHub contributions and atomically write report.json."""
     context = await discover_repositories(
@@ -73,6 +78,21 @@ async def generate_career_report(
         )
         stats.merge(review_collection.stats)
 
+    identities = AuthorIdentities.build(
+        username=settings.username,
+        database_id=context.authenticated_user.database_id,
+        github_name=context.authenticated_user.name,
+        source=identities_file,
+    )
+    git_collection = collect_git_contributions(
+        tuple(repository.name_with_owner for repository in context.discovery.repositories),
+        cache_directory=settings.cache_directory,
+        token=settings.github_token,
+        identities=identities,
+        refresh=refresh,
+        concurrency=git_concurrency,
+    )
+
     report = CareerReport(
         organization=settings.organization,
         identity=ReportIdentity(
@@ -85,13 +105,15 @@ async def generate_career_report(
             repository_count=len(context.discovery.repositories),
             github_api_requests=stats.api_requests,
             github_cache_hits=stats.cache_hits,
+            git_repositories_processed=git_collection.repositories_processed,
+            git_repositories_failed=git_collection.repositories_failed,
             graphql_rate_limit_remaining=(
                 stats.latest_rate_limit.remaining if stats.latest_rate_limit else None
             ),
             graphql_rate_limit_reset_at=(
                 stats.latest_rate_limit.reset_at if stats.latest_rate_limit else None
             ),
-            warnings=tuple(stats.warnings),
+            warnings=tuple((*stats.warnings, *git_collection.warnings)),
         ),
         repositories=tuple(
             ReportRepository(
@@ -107,10 +129,12 @@ async def generate_career_report(
             )
             for repository in context.discovery.repositories
         ),
+        commit_summary=summarize_commits(git_collection.commits),
         pull_request_summary=summarize_pull_requests(pull_request_collection.pull_requests),
         review_summary=summarize_reviews(review_collection.reviews),
         pull_requests=pull_request_collection.pull_requests,
         reviews=review_collection.reviews,
+        commits=git_collection.commits,
     )
     path = write_json_report(report, settings.output_directory)
     return GeneratedCareerReport(report=report, path=path, discovery_context=context)
