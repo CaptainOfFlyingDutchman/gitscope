@@ -12,8 +12,8 @@ from rich.console import Console
 
 from gitscope import __version__
 from gitscope.config import ConfigurationError, Settings
-from gitscope.github.discovery import discover_repositories
 from gitscope.github.errors import GitHubError
+from gitscope.report.generate import generate_career_report
 from gitscope.repository_scope import (
     DEFAULT_REPOSITORIES_FILE,
     RepositoryScope,
@@ -66,7 +66,7 @@ def analyze(
         ),
     ] = DEFAULT_REPOSITORIES_FILE,
 ) -> None:
-    """Validate access and discover repositories for an organization analysis."""
+    """Collect scoped contributions and write a versioned JSON career report."""
     load_dotenv()
     try:
         settings = Settings.from_environment(
@@ -88,11 +88,11 @@ def analyze(
         raise typer.Exit(code=2) from exc
 
     try:
-        with console.status("Connecting to GitHub..."):
-            context = asyncio.run(
-                discover_repositories(
+        with console.status("Collecting GitHub contributions..."):
+            generated = asyncio.run(
+                generate_career_report(
                     settings,
-                    repository_scope.names,
+                    repository_scope,
                     refresh=refresh,
                 )
             )
@@ -100,8 +100,10 @@ def analyze(
         error_console.print(f"[bold red]GitHub error:[/bold red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    repository_count = len(context.discovery.repositories)
-    private_count = sum(repository.is_private for repository in context.discovery.repositories)
+    report = generated.report
+    context = generated.discovery_context
+    repository_count = len(report.repositories)
+    private_count = sum(repository.visibility == "PRIVATE" for repository in report.repositories)
     console.print(
         f"[green]Authenticated as[/green] [bold]{context.authenticated_user.login}[/bold]."
     )
@@ -111,10 +113,17 @@ def analyze(
         f"([bold]{private_count}[/bold] private)."
     )
     console.print(f"Source: {context.discovery.source.replace('-', ' ')}.")
-    if context.discovery.from_cache:
-        console.print("Repository metadata loaded from cache; no GraphQL query was used.")
-    elif context.discovery.rate_limit:
+    console.print(
+        f"Collected [bold]{report.pull_request_summary.total}[/bold] authored pull requests and "
+        f"[bold]{report.review_summary.total}[/bold] submitted reviews."
+    )
+    if report.collection.graphql_rate_limit_remaining is not None:
         console.print(
             f"GraphQL rate limit remaining: "
-            f"[bold]{context.discovery.rate_limit.remaining:,}[/bold]."
+            f"[bold]{report.collection.graphql_rate_limit_remaining:,}[/bold]."
         )
+    else:
+        console.print("GitHub contribution metadata loaded from cache.")
+    if report.collection.warnings:
+        console.print(f"[yellow]Warnings:[/yellow] {len(report.collection.warnings)}")
+    console.print(f"[green]Wrote[/green] [bold]{generated.path}[/bold].")

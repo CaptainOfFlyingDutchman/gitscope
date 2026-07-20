@@ -49,3 +49,16 @@ class RateLimitError(GitHubError):
         self.reset_at = reset_at
         suffix = f" It resets at {reset_at.isoformat()}." if reset_at else ""
         super().__init__(f"GitHub API rate limit exhausted.{suffix}")
+
+
+class RateLimitSafetyError(GitHubError):
+    """Raised before collection consumes the configured rate-limit reserve."""
+
+    def __init__(self, *, remaining: int, reserve: int, reset_at: datetime) -> None:
+        self.remaining = remaining
+        self.reserve = reserve
+        self.reset_at = reset_at
+        super().__init__(
+            f"Collection stopped with {remaining} GraphQL points remaining to preserve the "
+            f"{reserve}-point safety reserve. The limit resets at {reset_at.isoformat()}."
+        )

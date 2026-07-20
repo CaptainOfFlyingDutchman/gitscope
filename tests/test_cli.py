@@ -12,6 +12,15 @@ from gitscope.config import Settings
 from gitscope.github.discovery import DiscoveryContext
 from gitscope.github.errors import AuthenticationError
 from gitscope.github.models import AuthenticatedUser, RateLimit, RepositoryDiscovery
+from gitscope.models.report import (
+    CareerReport,
+    CollectionMetadata,
+    PullRequestSummary,
+    ReportIdentity,
+    ReviewSummary,
+)
+from gitscope.report.generate import GeneratedCareerReport
+from gitscope.repository_scope import RepositoryScope
 
 runner = CliRunner()
 
@@ -34,20 +43,22 @@ def test_analyze_requires_token() -> None:
     assert "GITHUB_TOKEN is not configured" in result.stderr
 
 
-def test_analyze_discovers_repositories(
+def test_analyze_generates_report(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    async def fake_discovery(
+    async def fake_generation(
         settings: Settings,
-        repository_names: tuple[str, ...],
+        repository_scope: RepositoryScope,
         *,
         refresh: bool = False,
-    ) -> DiscoveryContext:
+        rate_limit_reserve: int = 500,
+    ) -> GeneratedCareerReport:
         assert settings.organization == "josys-src"
-        assert repository_names == ("frontend",)
+        assert repository_scope.names == ("frontend",)
         assert refresh is True
-        return DiscoveryContext(
+        assert rate_limit_reserve == 500
+        context = DiscoveryContext(
             authenticated_user=AuthenticatedUser(login="octocat", id=1),
             discovery=RepositoryDiscovery(
                 repositories=(),
@@ -59,8 +70,43 @@ def test_analyze_discovers_repositories(
                 ),
             ),
         )
+        report = CareerReport(
+            organization="josys-src",
+            identity=ReportIdentity(username="target", authenticated_as="octocat"),
+            collection=CollectionMetadata(
+                generated_at=datetime(2026, 7, 20, tzinfo=UTC),
+                repository_scope_file=str(repository_scope.source),
+                repository_count=0,
+                github_api_requests=1,
+                github_cache_hits=0,
+                graphql_rate_limit_remaining=4999,
+            ),
+            repositories=(),
+            pull_request_summary=PullRequestSummary(
+                total=0,
+                open=0,
+                closed=0,
+                merged=0,
+                drafts=0,
+                merge_rate=None,
+            ),
+            review_summary=ReviewSummary(
+                total=0,
+                approvals=0,
+                changes_requested=0,
+                comments=0,
+                dismissed=0,
+            ),
+            pull_requests=(),
+            reviews=(),
+        )
+        return GeneratedCareerReport(
+            report=report,
+            path=tmp_path / "report.json",
+            discovery_context=context,
+        )
 
-    monkeypatch.setattr("gitscope.cli.discover_repositories", fake_discovery)
+    monkeypatch.setattr("gitscope.cli.generate_career_report", fake_generation)
     repositories_file = tmp_path / "repositories"
     repositories_file.write_text("josys-src/frontend\n", encoding="utf-8")
     result = runner.invoke(
@@ -81,23 +127,27 @@ def test_analyze_discovers_repositories(
     assert result.exit_code == 0
     assert "Authenticated as octocat" in result.stdout
     assert "Validated 0 allowlisted repositories in josys-src" in result.stdout
+    assert "Collected 0 authored pull requests and 0 submitted reviews" in result.stdout
     assert "4,999" in result.stdout
+    assert "report.json" in result.stdout
 
 
 def test_analyze_reports_github_error(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    async def rejected_discovery(
+    async def rejected_generation(
         _settings: Settings,
-        _repository_names: tuple[str, ...],
+        _repository_scope: RepositoryScope,
         *,
         refresh: bool = False,
-    ) -> DiscoveryContext:
+        rate_limit_reserve: int = 500,
+    ) -> GeneratedCareerReport:
         del refresh
+        del rate_limit_reserve
         raise AuthenticationError("token rejected")
 
-    monkeypatch.setattr("gitscope.cli.discover_repositories", rejected_discovery)
+    monkeypatch.setattr("gitscope.cli.generate_career_report", rejected_generation)
     repositories_file = tmp_path / "repositories"
     repositories_file.write_text("josys-src/frontend\n", encoding="utf-8")
     result = runner.invoke(

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from gitscope.models.repository import RepositoryVisibility
 
 
 class GitHubModel(BaseModel):
@@ -21,14 +22,6 @@ class AuthenticatedUser(GitHubModel):
     database_id: int = Field(alias="id")
     name: str | None = None
     avatar_url: str | None = None
-
-
-class RepositoryVisibility(StrEnum):
-    """Visibility values returned by GitHub."""
-
-    PUBLIC = "PUBLIC"
-    PRIVATE = "PRIVATE"
-    INTERNAL = "INTERNAL"
 
 
 class RepositorySummary(GitHubModel):
@@ -67,3 +60,5 @@ class RepositoryDiscovery(GitHubModel):
     source: str
     rate_limit: RateLimit | None = None
     from_cache: bool = False
+    api_requests: int = 0
+    cache_hits: int = 0

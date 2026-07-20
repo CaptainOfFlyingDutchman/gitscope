@@ -21,8 +21,8 @@ from gitscope.github.models import (
     RateLimit,
     RepositoryDiscovery,
     RepositorySummary,
-    RepositoryVisibility,
 )
+from gitscope.models.repository import RepositoryVisibility
 
 GRAPHQL_API_URL = "https://api.github.com/graphql"
 SCOPED_REPOSITORY_BATCH_SIZE = 50
@@ -186,6 +186,8 @@ class GitHubGraphQLClient:
         cursor: str | None = None
         latest_rate_limit: RateLimit | None = None
         all_pages_cached = True
+        api_requests = 0
+        cache_hits = 0
 
         while True:
             data, from_cache = await self.execute(
@@ -194,6 +196,8 @@ class GitHubGraphQLClient:
                 refresh=refresh,
             )
             all_pages_cached = all_pages_cached and from_cache
+            cache_hits += int(from_cache)
+            api_requests += int(not from_cache)
             try:
                 page = _RepositoriesPage.model_validate(data)
             except ValidationError as exc:
@@ -221,6 +225,8 @@ class GitHubGraphQLClient:
             source="graphql",
             rate_limit=latest_rate_limit,
             from_cache=all_pages_cached,
+            api_requests=api_requests,
+            cache_hits=cache_hits,
         )
 
     async def repositories_by_name(
@@ -235,12 +241,16 @@ class GitHubGraphQLClient:
         unavailable: list[str] = []
         latest_rate_limit: RateLimit | None = None
         all_batches_cached = True
+        api_requests = 0
+        cache_hits = 0
 
         for start in range(0, len(repository_names), SCOPED_REPOSITORY_BATCH_SIZE):
             batch = repository_names[start : start + SCOPED_REPOSITORY_BATCH_SIZE]
             query, variables = self._scoped_repositories_query(organization, batch)
             data, from_cache = await self.execute(query, variables, refresh=refresh)
             all_batches_cached = all_batches_cached and from_cache
+            cache_hits += int(from_cache)
+            api_requests += int(not from_cache)
             try:
                 latest_rate_limit = RateLimit.model_validate(data.get("rateLimit"))
                 for index, name in enumerate(batch):
@@ -263,6 +273,8 @@ class GitHubGraphQLClient:
             source="graphql-allowlist",
             rate_limit=latest_rate_limit,
             from_cache=all_batches_cached,
+            api_requests=api_requests,
+            cache_hits=cache_hits,
         )
 
     @staticmethod

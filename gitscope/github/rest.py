@@ -16,8 +16,8 @@ from gitscope.github.http import GitHubHTTPClient
 from gitscope.github.models import (
     AuthenticatedUser,
     RepositorySummary,
-    RepositoryVisibility,
 )
+from gitscope.models.repository import RepositoryVisibility
 
 REST_API_URL = "https://api.github.com"
 

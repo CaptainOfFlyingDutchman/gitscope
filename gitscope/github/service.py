@@ -33,7 +33,11 @@ class GitHubService:
             )
         except GraphQLQueryError:
             repositories = await self.rest.organization_repositories(organization)
-            return RepositoryDiscovery(repositories=repositories, source="rest")
+            return RepositoryDiscovery(
+                repositories=repositories,
+                source="rest",
+                api_requests=2,
+            )
 
     async def repositories_by_name(
         self,
@@ -51,4 +55,8 @@ class GitHubService:
             )
         except GraphQLQueryError:
             repositories = await self.rest.repositories_by_name(organization, repository_names)
-            return RepositoryDiscovery(repositories=repositories, source="rest-allowlist")
+            return RepositoryDiscovery(
+                repositories=repositories,
+                source="rest-allowlist",
+                api_requests=len(repository_names) + 1,
+            )
