@@ -8,6 +8,7 @@ from typing import Annotated
 
 import typer
 from dotenv import load_dotenv
+from pydantic import ValidationError
 from rich.console import Console
 
 from gitscope import __version__
@@ -15,6 +16,7 @@ from gitscope.config import ConfigurationError, Settings
 from gitscope.git.identities import DEFAULT_IDENTITIES_FILE, IdentityFileError
 from gitscope.github.errors import GitHubError
 from gitscope.report.generate import generate_career_report
+from gitscope.report.resume import ResumeError, generate_resume_portfolio
 from gitscope.repository_scope import (
     DEFAULT_REPOSITORIES_FILE,
     RepositoryScope,
@@ -169,3 +171,57 @@ def analyze(
     if generated.csv_path is not None:
         console.print(f"[green]Wrote[/green] CSV export [bold]{generated.csv_path}[/bold].")
     console.print(f"[green]Wrote[/green] [bold]{generated.path}[/bold].")
+
+
+@app.command()
+def resume(
+    report_path: Annotated[
+        Path,
+        typer.Option(
+            "--report",
+            help="Existing GitScope report.json; no GitHub API calls are made.",
+        ),
+    ] = Path("career-report/report.json"),
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Directory for resume.md and resume.html."),
+    ] = None,
+    name: Annotated[
+        str | None,
+        typer.Option("--name", help="Professional display name; defaults to GitHub username."),
+    ] = None,
+    title: Annotated[
+        str,
+        typer.Option("--title", help="Current professional title."),
+    ] = "Software Engineer",
+    company: Annotated[
+        str | None,
+        typer.Option("--company", help="Current company; defaults to report organization."),
+    ] = None,
+    website: Annotated[
+        str | None,
+        typer.Option("--site", help="Optional HTTP(S) professional website."),
+    ] = None,
+) -> None:
+    """Generate an offline contribution résumé from an existing JSON report."""
+    try:
+        generated = generate_resume_portfolio(
+            report_path,
+            output or report_path.parent,
+            name=name,
+            title=title,
+            company=company,
+            website=website,
+        )
+    except (ResumeError, ValidationError) as exc:
+        error_console.print(f"[bold red]Resume error:[/bold red] {exc}")
+        raise typer.Exit(code=2) from exc
+
+    profile = generated.document.profile
+    console.print(
+        f"[bold]{profile.name}[/bold] · [bold]{profile.title}[/bold] at "
+        f"[bold]{profile.company}[/bold]"
+    )
+    console.print(generated.document.summary)
+    console.print(f"[green]Wrote[/green] Markdown résumé [bold]{generated.markdown_path}[/bold].")
+    console.print(f"[green]Wrote[/green] HTML résumé [bold]{generated.html_path}[/bold].")

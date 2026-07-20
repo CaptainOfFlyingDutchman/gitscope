@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Contribution résumé for {{ resume.profile.name }}.">
+  <title>{{ resume.profile.name }} · Contribution Résumé</title>
+  <script src="resume.js"></script>
+  <link rel="stylesheet" href="resume.css">
+</head>
+<body>
+  <a class="skip-link" href="#resume-content">Skip to résumé</a>
+  <nav class="toolbar" aria-label="Résumé controls">
+    <a class="toolbar__brand" href="report.html"><span aria-hidden="true">G</span> GitScope</a>
+    <div class="toolbar__actions">
+      <button id="resume-theme-toggle" class="theme-toggle" type="button" role="switch" aria-checked="false" aria-label="Dark theme">
+        <span aria-hidden="true">☀️</span><span class="theme-toggle__track" aria-hidden="true"><span></span></span><span aria-hidden="true">🌙</span>
+      </button>
+      <button id="resume-print" class="print-button" type="button">Print / Save PDF</button>
+    </div>
+  </nav>
+
+  <main id="resume-content" class="page-shell">
+    <article class="resume-sheet">
+      <header class="resume-header">
+        <div>
+          <p class="kicker">Contribution résumé</p>
+          <h1>{{ resume.profile.name }}</h1>
+          <p class="role">{{ resume.profile.title }} <span>at</span> {{ resume.profile.company }}</p>
+        </div>
+        <div class="identity-links">
+          <span>@{{ resume.github_username }}</span>
+          {% if resume.profile.website %}<a href="{{ resume.profile.website }}" target="_blank" rel="noopener noreferrer">Website ↗</a>{% endif %}
+          <a href="report.html">Full contribution dashboard →</a>
+        </div>
+      </header>
+
+      <div class="resume-grid">
+        <div class="resume-main">
+          <section aria-labelledby="summary-title">
+            <p class="section-label">Profile</p>
+            <h2 id="summary-title">Professional summary</h2>
+            <p class="summary">{{ resume.summary }}</p>
+          </section>
+
+          <section aria-labelledby="highlights-title">
+            <p class="section-label">Selected evidence</p>
+            <h2 id="highlights-title">Contribution highlights</h2>
+            <ul class="highlights">
+              {% for highlight in resume.highlights %}<li>{{ highlight }}</li>{% endfor %}
+            </ul>
+          </section>
+
+          <section aria-labelledby="milestones-title">
+            <p class="section-label">Progression</p>
+            <h2 id="milestones-title">Career milestones</h2>
+            {% if resume.milestones %}
+            <ol class="timeline">
+              {% for milestone in resume.milestones %}<li><time datetime="{{ milestone.occurred_at.date().isoformat() }}">{{ milestone.occurred_at | date }}</time><strong>{{ milestone.label }}</strong></li>{% endfor %}
+            </ol>
+            {% else %}<p class="empty">No contribution milestones were available.</p>{% endif %}
+          </section>
+        </div>
+
+        <aside class="resume-sidebar" aria-label="Contribution evidence">
+          <section aria-labelledby="technologies-title">
+            <p class="section-label">Technical range</p>
+            <h2 id="technologies-title">Primary technologies</h2>
+            <ul class="technology-list">
+              {% for technology in resume.technologies %}<li>{{ technology }}</li>{% else %}<li>Not available</li>{% endfor %}
+            </ul>
+          </section>
+
+          <section aria-labelledby="evidence-title">
+            <p class="section-label">Collected scope</p>
+            <h2 id="evidence-title">Contribution evidence</h2>
+            <dl class="metrics">
+              {% for metric in resume.metrics %}<div><dt>{{ metric.label }}</dt><dd>{{ metric.value }}</dd><small>{{ metric.context }}</small></div>{% endfor %}
+            </dl>
+          </section>
+
+          <section class="scope-note" aria-labelledby="period-title">
+            <h2 id="period-title">Report period</h2>
+            <p>{% if resume.first_contribution %}{{ resume.first_contribution | date }} – {{ resume.last_contribution | date }}{% else %}No contribution period available{% endif %}</p>
+            <small>Organization scope: {{ resume.contribution_scope }}</small>
+          </section>
+        </aside>
+      </div>
+
+      <footer class="resume-footer">
+        <p>Generated from a private GitScope report · Schema {{ resume.schema_version }}</p>
+        <p>Contribution totals document the collected scope and are not productivity scores.</p>
+        <p class="resume-footer__credit"><strong>Made with care and <span aria-label="love">❤️</span> by <a href="https://www.manvendrask.com/about" target="_blank" rel="noopener noreferrer">Manvendra Singh</a>.</strong></p>
+      </footer>
+    </article>
+  </main>
+</body>
+</html>

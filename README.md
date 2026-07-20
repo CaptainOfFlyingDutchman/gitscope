@@ -391,13 +391,37 @@ Machine-readable output for integrations.
 
 # Resume Mode
 
-Support:
+Generate synchronized Markdown and HTML contribution résumés from an existing
+`report.json` without making GitHub API requests:
 
-```
-gitscope resume
+```bash
+gitscope resume \
+  --name "Manvendra Singh" \
+  --title "Staff Engineer" \
+  --company "Josys" \
+  --site "https://example.com/about"
 ```
 
-Generate a concise engineering summary suitable for resumes or LinkedIn.
+By default, GitScope reads `career-report/report.json` and writes:
+
+```text
+career-report/
+├── resume.md
+├── resume.html
+├── resume.css
+└── resume.js
+```
+
+The HTML résumé is responsive, supports light and dark themes, and includes
+A4 print styling for saving as PDF. Generated content is deterministic and
+evidence-based. Private repository names are not included, and contribution
+counts are presented as documentation rather than productivity scores.
+
+When profile options are omitted, the GitHub username, a neutral software
+engineer title, and the report organization are used as defaults.
+
+The résumé includes a concise engineering summary suitable for résumés or
+LinkedIn.
 
 Example:
 

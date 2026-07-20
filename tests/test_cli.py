@@ -35,6 +35,45 @@ def test_version() -> None:
     assert f"GitScope {__version__}" in result.stdout
 
 
+def test_resume_generates_offline_portfolio(tmp_path: Path) -> None:
+    from tests.report.test_json import empty_report
+
+    report_path = tmp_path / "report.json"
+    report_path.write_text(empty_report().model_dump_json(), encoding="utf-8")
+    result = runner.invoke(
+        app,
+        [
+            "resume",
+            "--report",
+            str(report_path),
+            "--name",
+            "Manvendra Singh",
+            "--title",
+            "Staff Engineer",
+            "--company",
+            "Josys",
+            "--site",
+            "https://www.manvendrask.com/about",
+        ],
+        env={"GITHUB_TOKEN": ""},
+    )
+
+    assert result.exit_code == 0
+    assert "Manvendra Singh" in result.stdout
+    assert "Staff Engineer" in result.stdout
+    assert "resume.md" in result.stdout
+    assert "resume.html" in result.stdout
+    assert (tmp_path / "resume.md").exists()
+    assert (tmp_path / "resume.html").exists()
+
+
+def test_resume_reports_missing_json(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["resume", "--report", str(tmp_path / "missing.json")])
+
+    assert result.exit_code == 2
+    assert "Resume error" in result.stderr
+
+
 def test_analyze_requires_token() -> None:
     result = runner.invoke(
         app,

@@ -3,6 +3,7 @@
 from gitscope.models.commit import CommitContribution
 from gitscope.models.pull_request import PullRequest, PullRequestState
 from gitscope.models.report import CareerReport
+from gitscope.models.resume import ResumeDocument, ResumeProfile
 from gitscope.models.review import PullRequestReview, ReviewState
 
 __all__ = [
@@ -11,5 +12,7 @@ __all__ = [
     "PullRequest",
     "PullRequestReview",
     "PullRequestState",
+    "ResumeDocument",
+    "ResumeProfile",
     "ReviewState",
 ]
