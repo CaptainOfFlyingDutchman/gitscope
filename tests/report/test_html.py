@@ -75,7 +75,17 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
     assert stat.S_IMODE((output_directory / "styles.css").stat().st_mode) == 0o600
     assert "Contribution overview" in html
     assert "Contribution heatmap" in html
+    assert "Made with care and" in html
+    assert "Manvendra Singh" in html
+    assert 'href="https://www.manvendrask.com/about"' in html
     assert "Repository Contribution Rankings" in html
+    assert 'class="chart-card chart-card--wide"' in html
+    commit_pattern_card = html.split('aria-label="Authored commit patterns', maxsplit=1)[0]
+    assert commit_pattern_card.endswith('class="chart-card chart-card--wide" ')
+    yearly_position = html.index("Yearly Contribution Activity")
+    extensions_position = html.index("Most Frequently Changed File Extensions")
+    commit_patterns_position = html.index("Commit Activity Patterns")
+    assert yearly_position < extensions_position < commit_patterns_position
     assert 'src="charts/plotly.min.js"' in html
     assert "https://cdn.plot.ly" not in html
     assert html.count("plotly-graph-div") == 10

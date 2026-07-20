@@ -15,6 +15,18 @@ from gitscope.charts.bundle import build_chart_figures
 from gitscope.models.report import CareerReport
 
 _TEMPLATE_DIRECTORY = Path(__file__).parent.parent / "templates"
+_DASHBOARD_CHART_ORDER = (
+    "monthly-activity",
+    "yearly-activity",
+    "file-extensions",
+    "commit-patterns",
+    "repository-rankings",
+    "pull-request-states",
+    "review-activity",
+    "review-states",
+    "contributed-languages",
+    "career-milestones",
+)
 _CHART_DESCRIPTIONS = {
     "monthly-activity": "Monthly commits, pull requests, and reviews across the selected scope.",
     "yearly-activity": "Year-over-year comparison of contribution activity.",
@@ -80,19 +92,20 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
     environment.filters["number"] = lambda value: f"{value:,}"
     environment.filters["date"] = _format_date
 
+    figures = dict(build_chart_figures(report))
     charts = tuple(
         DashboardChart(
             slug=slug,
             description=_CHART_DESCRIPTIONS[slug],
             html=pio.to_html(
-                figure,
+                figures[slug],
                 include_plotlyjs=False,
                 full_html=False,
                 div_id=f"gitscope-dashboard-{slug}",
                 config={"displaylogo": False, "responsive": True, "scrollZoom": False},
             ),
         )
-        for slug, figure in build_chart_figures(report)
+        for slug in _DASHBOARD_CHART_ORDER
     )
     repositories = tuple(
         sorted(
