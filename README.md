@@ -439,7 +439,15 @@ Use:
 * caching
 * incremental updates
 * GraphQL batching
-* shallow clones when appropriate
+
+GitScope intentionally uses cached **full bare repository mirrors**, not shallow
+clones. Complete Git history is required to produce accurate lifetime commit,
+timeline, identity-alias, and code-change statistics. A shallow clone would make
+those results incomplete or dependent on an arbitrary depth.
+
+The initial mirror can therefore require more time and disk space. Subsequent
+runs reuse the private local mirror, and `--refresh` performs an incremental
+fetch rather than cloning the repository again.
 
 Avoid unnecessary API requests.
 
@@ -523,7 +531,7 @@ The CLI should feel polished.
 Examples:
 
 ```
-gitscope --org josys-src --user octocat
+gitscope analyze --org josys-src --user octocat
 
 gitscope resume
 
@@ -541,9 +549,41 @@ Use:
 
 ---
 
+# Remaining 0.1.0 Milestones
+
+The remaining milestones for the first public release are:
+
+1. **Advanced Pull Request Analytics**
+   * merge-time statistics
+   * largest and longest-running pull requests
+   * open pull-request age
+   * pull-request activity rankings and visualizations
+2. **Issue Contributions**
+   * authored issue collection
+   * issue states, timelines, and repository summaries
+3. **Offline Export and CLI UX**
+   * regenerate individual outputs from an existing `report.json`
+   * `gitscope export` commands
+   * improved progress and terminal summaries
+4. **Logging, Cache Management, and Diagnostics**
+   * sanitized diagnostic logging
+   * cache inspection and lifecycle commands
+   * verbose troubleshooting mode
+5. **CI, Documentation, and Release Readiness**
+   * automated tests, linting, typing, and package builds
+   * installation, contribution, security, and architecture documentation
+   * installed-wheel verification
+6. **GitScope 0.1.0 Release**
+   * final package metadata and version verification
+   * `uv tool install` readiness
+   * first public release
+
+---
+
 # Future Roadmap
 
-Potential future enhancements include:
+The following ideas are explicitly deferred beyond the current `0.1.0` plan.
+They are not being implemented as part of the milestones above:
 
 * GitLab support
 * Azure DevOps support
@@ -555,7 +595,6 @@ Potential future enhancements include:
 * Docker image
 * GitHub Action
 * Homebrew installation
-* `uv tool install` support
 * Plugin architecture
 
 ---
