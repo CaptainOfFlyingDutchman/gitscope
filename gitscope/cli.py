@@ -160,4 +160,6 @@ def analyze(
     console.print(
         f"[green]Wrote[/green] [bold]{len(generated.chart_paths)}[/bold] interactive charts."
     )
+    if generated.html_path is not None:
+        console.print(f"[green]Wrote[/green] dashboard [bold]{generated.html_path}[/bold].")
     console.print(f"[green]Wrote[/green] [bold]{generated.path}[/bold].")

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="GitScope engineering contribution report for {{ report.identity.username }} at {{ report.organization }}.">
+  <title>{{ report.identity.username }} · GitScope Career Report</title>
+  <link rel="stylesheet" href="styles.css">
+  <script charset="utf-8" src="charts/plotly.min.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to report</a>
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="brand"><span class="brand__mark" aria-hidden="true">G</span> GitScope</div>
+      <div class="hero__copy">
+        <p class="eyebrow">Engineering contribution report</p>
+        <h1>{{ report.identity.username }}</h1>
+        <p class="hero__lede">A contribution-focused view across {{ report.collection.repository_count | number }} repositories in {{ report.organization }}.</p>
+      </div>
+      <dl class="hero__meta">
+        <div><dt>Generated</dt><dd>{{ report.collection.generated_at | date }}</dd></div>
+        <div><dt>Scope</dt><dd>{{ report.organization }}</dd></div>
+        <div><dt>Period</dt><dd>{% if report.timeline.first_contribution %}{{ report.timeline.first_contribution | date }} – {{ report.timeline.last_contribution | date }}{% else %}No activity collected{% endif %}</dd></div>
+      </dl>
+    </div>
+  </header>
+
+  <main id="main-content" class="report-shell">
+    <section aria-labelledby="overview-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">At a glance</p><h2 id="overview-title">Contribution overview</h2></div>
+        <p>Activity is reported as evidence of participation, not a measure of individual productivity.</p>
+      </div>
+      <div class="metric-grid">
+        <article class="metric metric--commits"><span>Authored commits</span><strong>{{ report.commit_summary.total | number }}</strong><small>{{ report.commit_summary.merge_commits | number }} merge commits</small></article>
+        <article class="metric metric--prs"><span>Authored pull requests</span><strong>{{ report.pull_request_summary.total | number }}</strong><small>{% if report.pull_request_summary.merge_rate is not none %}{{ "%.1f" | format(report.pull_request_summary.merge_rate * 100) }}% merge rate{% else %}No completed PRs{% endif %}</small></article>
+        <article class="metric metric--reviews"><span>Submitted reviews</span><strong>{{ report.review_summary.total | number }}</strong><small>{{ report.review_summary.approvals | number }} approvals</small></article>
+        <article class="metric"><span>Repositories</span><strong>{{ report.collection.repository_count | number }}</strong><small>{{ report.collection.git_repositories_processed | number }} analyzed locally</small></article>
+        <article class="metric"><span>Active days</span><strong>{{ report.timeline.active_days | number }}</strong><small>{{ report.timeline.career_span_days | number }}-day span</small></article>
+        <article class="metric"><span>Changed lines</span><strong>{{ (report.commit_summary.additions + report.commit_summary.deletions) | number }}</strong><small>+{{ report.commit_summary.additions | number }} / −{{ report.commit_summary.deletions | number }}</small></article>
+      </div>
+    </section>
+
+    <section class="panel heatmap-panel" aria-labelledby="heatmap-title">
+      <div class="panel-heading"><div><p class="eyebrow">Recent rhythm</p><h2 id="heatmap-title">Contribution heatmap</h2></div><p>{{ heatmap.start.strftime('%b %Y') }} – {{ heatmap.end.strftime('%b %Y') }}</p></div>
+      <div class="heatmap-scroll" tabindex="0" aria-label="Scrollable 53-week contribution calendar">
+        <div class="heatmap-months" aria-hidden="true">
+          {% for month in heatmap.months %}<span style="grid-column: {{ month.column }}">{{ month.label }}</span>{% endfor %}
+        </div>
+        <div class="heatmap-body">
+          <div class="heatmap-days" aria-hidden="true"><span>Sun</span><span></span><span>Tue</span><span></span><span>Thu</span><span></span><span>Sat</span></div>
+          <div class="heatmap-weeks">
+            {% for week in heatmap.weeks %}<div class="heatmap-week">{% for day in week %}<span class="heatmap-cell level-{{ day.level }}{% if day.value is none %} is-future{% endif %}" title="{{ day.label }}" aria-label="{{ day.label }}"></span>{% endfor %}</div>{% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="heatmap-legend" aria-hidden="true"><span>Less</span>{% for level in range(5) %}<i class="heatmap-cell level-{{ level }}"></i>{% endfor %}<span>More</span></div>
+    </section>
+
+    <section aria-labelledby="activity-title">
+      <div class="section-heading"><div><p class="eyebrow">Activity</p><h2 id="activity-title">Contribution patterns</h2></div><p>Hover or focus chart elements for exact values.</p></div>
+      <div class="chart-layout">
+        {% for chart in charts %}
+        <article class="chart-card{% if chart.slug in ('monthly-activity', 'repository-rankings', 'career-milestones') %} chart-card--wide{% endif %}" aria-label="{{ chart.description }}">
+          <p class="chart-description">{{ chart.description }}</p>
+          {{ chart.html | safe }}
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section aria-labelledby="repositories-title">
+      <div class="section-heading"><div><p class="eyebrow">Repository scope</p><h2 id="repositories-title">Contribution details</h2></div><p>Sorted by combined commits, pull requests, and reviews.</p></div>
+      <div class="table-card"><div class="table-scroll" tabindex="0"><table>
+        <thead><tr><th>Repository</th><th>Language</th><th class="numeric">Commits</th><th class="numeric">PRs</th><th class="numeric">Reviews</th><th class="numeric">Files changed</th><th>Last contribution</th></tr></thead>
+        <tbody>{% for repository in repositories %}<tr><th scope="row">{{ repository.name_with_owner }}{% if repository.is_archived %}<span class="badge">Archived</span>{% endif %}</th><td>{{ repository.primary_language or '—' }}</td><td class="numeric">{{ repository.commits | number }}</td><td class="numeric">{{ repository.pull_requests | number }}</td><td class="numeric">{{ repository.reviews | number }}</td><td class="numeric">{{ repository.files_changed | number }}</td><td>{% if repository.last_contribution %}{{ repository.last_contribution | date }}{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="7" class="empty-state">No repository activity was collected.</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+    </section>
+
+    <section aria-labelledby="pull-requests-title">
+      <div class="section-heading"><div><p class="eyebrow">Recent work</p><h2 id="pull-requests-title">Recently updated pull requests</h2></div><p>Up to twelve authored pull requests from the selected scope.</p></div>
+      <div class="table-card"><div class="table-scroll" tabindex="0"><table>
+        <thead><tr><th>Pull request</th><th>Repository</th><th>State</th><th class="numeric">Changes</th><th>Updated</th></tr></thead>
+        <tbody>{% for pull_request in recent_pull_requests %}<tr><th scope="row"><a href="{{ pull_request.url }}" target="_blank" rel="noopener noreferrer">#{{ pull_request.number }} {{ pull_request.title }}</a>{% if pull_request.is_draft %}<span class="badge">Draft</span>{% endif %}</th><td>{{ pull_request.repository }}</td><td><span class="state state--{{ pull_request.state.value | lower }}">{{ pull_request.state.value | title }}</span></td><td class="numeric">+{{ pull_request.additions | number }} / −{{ pull_request.deletions | number }}</td><td>{{ pull_request.updated_at | date }}</td></tr>{% else %}<tr><td colspan="5" class="empty-state">No authored pull requests were collected.</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+    </section>
+
+    {% if report.collection.warnings %}<section class="notice" aria-labelledby="warnings-title"><h2 id="warnings-title">Collection notes</h2><ul>{% for warning in report.collection.warnings %}<li>{{ warning }}</li>{% endfor %}</ul></section>{% endif %}
+  </main>
+  <footer><p>Generated by GitScope · Schema {{ report.schema_version }} · Data remains local to this report.</p></footer>
+</body>
+</html>

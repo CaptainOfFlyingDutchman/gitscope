@@ -31,7 +31,7 @@ def write_chart_bundle(report: CareerReport, output_directory: Path) -> tuple[Pa
     _write_private_text(output_directory / _PLOTLY_SCRIPT, get_plotlyjs())
 
     paths: list[Path] = []
-    for slug, figure in _chart_figures(report):
+    for slug, figure in build_chart_figures(report):
         path = output_directory / f"{slug}.html"
         html = pio.to_html(
             figure,
@@ -54,7 +54,8 @@ def write_chart_bundle(report: CareerReport, output_directory: Path) -> tuple[Pa
     return tuple(paths)
 
 
-def _chart_figures(report: CareerReport) -> tuple[tuple[str, Figure], ...]:
+def build_chart_figures(report: CareerReport) -> tuple[tuple[str, Figure], ...]:
+    """Build the complete, ordered set of report figures."""
     return (
         ("monthly-activity", monthly_activity_chart(report.timeline)),
         ("yearly-activity", yearly_activity_chart(report.timeline)),
