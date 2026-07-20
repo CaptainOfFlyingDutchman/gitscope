@@ -4,6 +4,16 @@ All notable changes to GitScope are documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-07-21
+
+### Added
+
+- A packaged GitScope SVG favicon for the offline dashboard, contribution résumé, and every standalone chart page.
+
+### Changed
+
+- Offline HTML exporters now copy the favicon alongside their other private, portable assets.
+
 ## [0.1.0] - 2026-07-21
 
 ### Added
@@ -26,4 +36,5 @@ All notable changes to GitScope are documented in this file. The format follows
 - Generated reports, caches, credentials, identity files, and repository lists are ignored by Git.
 - Distribution verification rejects private state, generated reports, and missing runtime templates.
 
+[0.1.1]: https://github.com/CaptainOfFlyingDutchman/gitscope/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CaptainOfFlyingDutchman/gitscope/releases/tag/v0.1.0

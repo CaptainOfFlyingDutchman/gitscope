@@ -29,6 +29,7 @@ def test_html_export_writes_dashboard_support_without_standalone_charts(tmp_path
     assert exported.paths == (output_directory / "report.html",)
     assert (output_directory / "styles.css").exists()
     assert (output_directory / "theme.js").exists()
+    assert (output_directory / "favicon.svg").exists()
     assert (output_directory / "charts" / "plotly.min.js").exists()
     assert not tuple((output_directory / "charts").glob("*.html"))
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700

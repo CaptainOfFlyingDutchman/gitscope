@@ -93,11 +93,13 @@ older reports remain supported.
 - `gitscope/charts/` contains reusable Plotly figure builders and the standalone
   chart bundle.
 - `gitscope/report/` writes JSON, HTML, Markdown, CSV, and résumé outputs.
+- `gitscope/assets.py` copies shared packaged assets into portable output bundles.
 - `gitscope/templates/` contains package data required at runtime.
 
 Offline exporters read only a validated `report.json`. They must remain
 deterministic and must not call GitHub, inspect Git repositories, or require a
-token. Plotly is copied locally so HTML outputs remain portable and offline.
+token. Plotly and the SVG favicon are copied locally so HTML outputs remain
+portable and offline.
 
 ## Storage layout
 

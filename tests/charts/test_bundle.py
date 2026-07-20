@@ -18,4 +18,8 @@ def test_write_chart_bundle_creates_private_offline_pages(tmp_path: Path) -> Non
     assert all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in paths)
     assert (output_directory / "plotly.min.js").exists()
     assert stat.S_IMODE((output_directory / "plotly.min.js").stat().st_mode) == 0o600
-    assert 'src="plotly.min.js"' in paths[0].read_text(encoding="utf-8")
+    assert (output_directory / "favicon.svg").exists()
+    assert stat.S_IMODE((output_directory / "favicon.svg").stat().st_mode) == 0o600
+    html = paths[0].read_text(encoding="utf-8")
+    assert 'src="plotly.min.js"' in html
+    assert '<link rel="icon" href="favicon.svg" type="image/svg+xml">' in html

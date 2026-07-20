@@ -87,12 +87,15 @@ def smoke_test(executable: Path, report_path: Path, expected_version: str) -> No
             report_output / "report.html",
             report_output / "report.md",
             report_output / "report.csv",
+            report_output / "favicon.svg",
+            report_output / "charts" / "favicon.svg",
             report_output / "charts" / "plotly.min.js",
             report_output / "charts" / "issue-states.html",
             report_output / "charts" / "pull-request-states.html",
             resume_output / "resume.md",
             resume_output / "resume.html",
             resume_output / "resume.css",
+            resume_output / "favicon.svg",
             resume_output / "resume.js",
         }
         missing = sorted(str(path) for path in required_outputs if not path.is_file())

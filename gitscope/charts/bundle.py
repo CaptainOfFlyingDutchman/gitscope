@@ -9,6 +9,7 @@ import plotly.io as pio
 from plotly.graph_objects import Figure
 from plotly.offline import get_plotlyjs
 
+from gitscope.assets import FAVICON_FILENAME, write_favicon
 from gitscope.charts.activity import (
     monthly_activity_chart,
     pull_request_states_chart,
@@ -32,6 +33,7 @@ _PLOTLY_SCRIPT = "plotly.min.js"
 def write_chart_bundle(report: CareerReport, output_directory: Path) -> tuple[Path, ...]:
     """Write private, offline, standalone chart pages with one shared Plotly runtime."""
     write_plotly_runtime(output_directory)
+    write_favicon(output_directory)
 
     paths: list[Path] = []
     for slug, figure in build_chart_figures(report):
@@ -49,7 +51,10 @@ def write_chart_bundle(report: CareerReport, output_directory: Path) -> tuple[Pa
         )
         html = html.replace(
             "</head>",
-            f'<script charset="utf-8" src="{_PLOTLY_SCRIPT}"></script></head>',
+            (
+                f'<link rel="icon" href="{FAVICON_FILENAME}" type="image/svg+xml">'
+                f'<script charset="utf-8" src="{_PLOTLY_SCRIPT}"></script></head>'
+            ),
             1,
         )
         _write_private_text(path, html)

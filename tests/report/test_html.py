@@ -107,10 +107,12 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
     assert path == output_directory / "report.html"
     assert (output_directory / "styles.css").exists()
     assert (output_directory / "theme.js").exists()
+    assert (output_directory / "favicon.svg").exists()
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert stat.S_IMODE((output_directory / "styles.css").stat().st_mode) == 0o600
     assert stat.S_IMODE((output_directory / "theme.js").stat().st_mode) == 0o600
+    assert stat.S_IMODE((output_directory / "favicon.svg").stat().st_mode) == 0o600
     assert "Contribution overview" in html
     assert "Contribution heatmap" in html
     assert "Made with care and" in html
@@ -119,6 +121,7 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
     assert 'id="theme-toggle"' in html
     assert 'role="switch"' in html
     assert 'src="theme.js"' in html
+    assert '<link rel="icon" href="favicon.svg" type="image/svg+xml">' in html
     theme_script = (output_directory / "theme.js").read_text(encoding="utf-8")
     assert "prefers-color-scheme: dark" in theme_script
     assert "localStorage" in theme_script

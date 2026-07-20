@@ -11,8 +11,10 @@ from zipfile import BadZipFile, ZipFile
 
 REQUIRED_MEMBERS = {
     "gitscope/__init__.py",
+    "gitscope/assets.py",
     "gitscope/cli.py",
     "gitscope/py.typed",
+    "gitscope/templates/favicon.svg",
     "gitscope/templates/report.html",
     "gitscope/templates/resume.css",
     "gitscope/templates/resume.html",

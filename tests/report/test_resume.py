@@ -158,6 +158,7 @@ def test_generate_resume_portfolio_writes_private_synchronized_outputs(tmp_path:
         generated.html_path,
         output_directory / "resume.css",
         output_directory / "resume.js",
+        output_directory / "favicon.svg",
     ):
         assert path.exists()
         assert stat.S_IMODE(path.stat().st_mode) == 0o600
@@ -167,6 +168,7 @@ def test_generate_resume_portfolio_writes_private_synchronized_outputs(tmp_path:
     assert "private-repo" not in html
     assert 'id="resume-theme-toggle"' in html
     assert 'id="resume-print"' in html
+    assert '<link rel="icon" href="favicon.svg" type="image/svg+xml">' in html
     assert 'href="https://www.manvendrask.com/about"' in html
     assert "Made with care and" in markdown
     assert "[**Manvendra Singh**](https://www.manvendrask.com/about)" in markdown

@@ -11,6 +11,7 @@ from pathlib import Path
 import plotly.io as pio
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 
+from gitscope.assets import write_favicon
 from gitscope.charts.bundle import build_chart_figures
 from gitscope.models.report import CareerReport
 
@@ -150,6 +151,7 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
     _write_private_text(output_directory / "styles.css", stylesheet)
     theme_script = (_TEMPLATE_DIRECTORY / "theme.js").read_text(encoding="utf-8")
     _write_private_text(output_directory / "theme.js", theme_script)
+    write_favicon(output_directory)
     path = output_directory / "report.html"
     _write_private_text(path, html)
     return path

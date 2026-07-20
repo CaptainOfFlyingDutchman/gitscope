@@ -9,6 +9,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 
+from gitscope.assets import write_favicon
 from gitscope.models.report import CareerMilestone, CareerReport
 from gitscope.models.resume import ResumeDocument, ResumeMetric, ResumeMilestone, ResumeProfile
 
@@ -344,6 +345,7 @@ def _write_resume_html(document: ResumeDocument, path: Path) -> None:
     for asset in ("resume.css", "resume.js"):
         content = (_TEMPLATE_DIRECTORY / asset).read_text(encoding="utf-8")
         _write_private_text(path.parent / asset, content)
+    write_favicon(path.parent)
 
 
 def _write_private_text(path: Path, content: str) -> None:

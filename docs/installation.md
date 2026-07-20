@@ -10,7 +10,7 @@ wheel as an isolated command-line tool:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.0/gitscope-0.1.0-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.1/gitscope-0.1.1-py3-none-any.whl
 gitscope --version
 gitscope doctor
 ```
@@ -22,7 +22,7 @@ Alternatively, install directly from the immutable Git tag:
 
 ```bash
 uv tool install \
-  'git+https://github.com/CaptainOfFlyingDutchman/gitscope.git@v0.1.0'
+  'git+https://github.com/CaptainOfFlyingDutchman/gitscope.git@v0.1.1'
 ```
 
 To upgrade later, install the new version's wheel URL with `--force`.
@@ -33,7 +33,7 @@ Release candidates can be exercised without publishing them:
 
 ```bash
 uv build
-uv tool install dist/gitscope-0.1.0-py3-none-any.whl
+uv tool install dist/gitscope-0.1.1-py3-none-any.whl
 gitscope --version
 ```
 

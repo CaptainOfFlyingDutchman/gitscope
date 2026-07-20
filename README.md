@@ -118,7 +118,7 @@ an isolated command-line tool:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.0/gitscope-0.1.0-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.1/gitscope-0.1.1-py3-none-any.whl
 gitscope --version
 ```
 
@@ -197,6 +197,7 @@ gitscope/
 
 ├── gitscope/
 │
+│   ├── assets.py
 │   ├── cli.py
 │   ├── config.py
 │   ├── cache.py
@@ -698,10 +699,7 @@ Completed:
    * automated tests, linting, typing, and package builds
    * installation, contribution, security, and architecture documentation
    * installed-wheel verification
-
-Remaining milestone for the first public release:
-
-1. **GitScope 0.1.0 Release**
+* **GitScope 0.1.0 Release**
    * final package metadata and version verification
    * `uv tool install` readiness
    * first public release
@@ -710,7 +708,7 @@ Remaining milestone for the first public release:
 
 # Future Roadmap
 
-The following ideas are explicitly deferred beyond the current `0.1.0` plan.
+The following ideas are explicitly deferred beyond the initial `0.1.0` plan.
 They are not being implemented as part of the milestones above:
 
 * GitLab support
@@ -748,7 +746,7 @@ happily install from its versioned GitHub release:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.0/gitscope-0.1.0-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.1/gitscope-0.1.1-py3-none-any.whl
 ```
 
 and immediately use to generate a polished report for any GitHub organization they have access to.
