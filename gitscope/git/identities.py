@@ -36,7 +36,7 @@ class AuthorIdentities:
         if github_name and github_name.strip():
             names.add(github_name.strip().casefold())
         if source.exists():
-            _load_identity_file(source, names, emails)
+            _load_identity_file(source, names, emails, database_id=database_id)
         return cls(names=frozenset(names), emails=frozenset(emails))
 
     def matches(self, name: str, email: str) -> bool:
@@ -44,7 +44,13 @@ class AuthorIdentities:
         return email.strip().casefold() in self.emails or name.strip().casefold() in self.names
 
 
-def _load_identity_file(source: Path, names: set[str], emails: set[str]) -> None:
+def _load_identity_file(
+    source: Path,
+    names: set[str],
+    emails: set[str],
+    *,
+    database_id: int,
+) -> None:
     for line_number, raw_line in enumerate(source.read_text(encoding="utf-8").splitlines(), 1):
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -53,13 +59,18 @@ def _load_identity_file(source: Path, names: set[str], emails: set[str]) -> None
         normalized_value = value.strip().casefold()
         if (
             not separator
-            or kind.strip().casefold() not in {"name", "email"}
+            or kind.strip().casefold() not in {"username", "name", "email"}
             or not normalized_value
         ):
             raise IdentityFileError(
-                f"{source}:{line_number}: expected 'name: value' or 'email: value'"
+                f"{source}:{line_number}: expected 'username:', 'name:', or 'email:'"
             )
-        if kind.strip().casefold() == "name":
+        normalized_kind = kind.strip().casefold()
+        if normalized_kind == "username":
+            names.add(normalized_value)
+            emails.add(f"{normalized_value}@users.noreply.github.com")
+            emails.add(f"{database_id}+{normalized_value}@users.noreply.github.com")
+        elif normalized_kind == "name":
             names.add(normalized_value)
         else:
             emails.add(normalized_value)
