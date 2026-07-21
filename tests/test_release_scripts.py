@@ -13,12 +13,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_current_release_metadata_is_consistent() -> None:
-    assert validate_release(PROJECT_ROOT, "v0.2.0") == "0.2.0"
+    assert validate_release(PROJECT_ROOT, "v0.2.1") == "0.2.1"
 
 
 def test_release_tag_must_match_project_version() -> None:
     with pytest.raises(ValueError, match="does not match project version"):
-        validate_release(PROJECT_ROOT, "v0.2.1")
+        validate_release(PROJECT_ROOT, "v0.2.2")
 
 
 def test_create_checksums_writes_sorted_sha256_manifest(tmp_path: Path) -> None:

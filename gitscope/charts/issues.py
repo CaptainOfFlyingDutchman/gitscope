@@ -10,6 +10,22 @@ from gitscope.models.report import IssueSummary
 
 def issue_states_chart(summary: IssueSummary) -> go.Figure:
     """Build an authored-issue lifecycle distribution."""
+    if summary.total == 0:
+        figure = go.Figure()
+        apply_chart_style(figure, title="Issue Outcomes", show_legend=False)
+        figure.add_annotation(
+            text="No authored issues collected",
+            x=0.5,
+            y=0.5,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            font={"size": 16},
+        )
+        figure.update_xaxes(visible=False)
+        figure.update_yaxes(visible=False)
+        return figure
+
     labels = ["Closed", "Open"]
     values = [summary.closed, summary.open]
     figure = go.Figure(

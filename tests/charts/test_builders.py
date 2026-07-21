@@ -160,3 +160,14 @@ def test_chart_builders_preserve_report_values() -> None:
     assert sum(merge_time_figure.data[0].y) == 1
     assert list(pull_request_repository_figure.data[0].x) == [3]
     assert list(issue_figure.data[0].x) == [1, 1]
+
+
+def test_shared_chart_style_has_opaque_hover_labels_and_empty_issue_state() -> None:
+    issue_figure = issue_states_chart(IssueSummary())
+
+    assert issue_figure.layout.hoverlabel.bgcolor == "#F8FAFC"
+    assert issue_figure.layout.hoverlabel.bordercolor == "#64748B"
+    assert issue_figure.layout.hoverlabel.font.color == "#172033"
+    assert issue_figure.layout.annotations[0].text == "No authored issues collected"
+    assert issue_figure.layout.xaxis.visible is False
+    assert issue_figure.layout.yaxis.visible is False

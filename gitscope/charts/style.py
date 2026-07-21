@@ -12,6 +12,9 @@ ADDITIONS_COLOR = "#56B4E9"
 DELETIONS_COLOR = "#D55E00"
 NEUTRAL_COLOR = "#7A7A7A"
 GRID_COLOR = "rgba(127, 127, 127, 0.22)"
+HOVER_BACKGROUND = "#F8FAFC"
+HOVER_BORDER = "#64748B"
+HOVER_TEXT = "#172033"
 
 
 def apply_chart_style(
@@ -31,6 +34,16 @@ def apply_chart_style(
         showlegend=show_legend,
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
         font={"family": "Inter, system-ui, sans-serif", "size": 13},
+        hoverlabel={
+            "bgcolor": HOVER_BACKGROUND,
+            "bordercolor": HOVER_BORDER,
+            "font": {
+                "color": HOVER_TEXT,
+                "family": "Inter, system-ui, sans-serif",
+                "size": 13,
+            },
+            "namelength": -1,
+        },
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )

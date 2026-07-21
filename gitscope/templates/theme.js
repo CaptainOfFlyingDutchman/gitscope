@@ -15,8 +15,20 @@
   document.documentElement.dataset.theme = initialTheme;
 
   const chartPalette = {
-    light: { ink: "#172033", grid: "rgba(127, 127, 127, 0.22)" },
-    dark: { ink: "#dfe8f4", grid: "rgba(169, 181, 199, 0.22)" },
+    light: {
+      ink: "#172033",
+      grid: "rgba(127, 127, 127, 0.22)",
+      hoverBackground: "#F8FAFC",
+      hoverBorder: "#64748B",
+      hoverText: "#172033",
+    },
+    dark: {
+      ink: "#dfe8f4",
+      grid: "rgba(169, 181, 199, 0.22)",
+      hoverBackground: "#172337",
+      hoverBorder: "#7890AA",
+      hoverText: "#F3F7FC",
+    },
   };
 
   function updateCharts(theme) {
@@ -27,6 +39,9 @@
         "font.color": palette.ink,
         "title.font.color": palette.ink,
         "legend.font.color": palette.ink,
+        "hoverlabel.bgcolor": palette.hoverBackground,
+        "hoverlabel.bordercolor": palette.hoverBorder,
+        "hoverlabel.font.color": palette.hoverText,
         "paper_bgcolor": "rgba(0,0,0,0)",
         "plot_bgcolor": "rgba(0,0,0,0)",
       };

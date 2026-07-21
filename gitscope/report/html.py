@@ -103,11 +103,7 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
     environment.filters["duration"] = _format_duration
 
     figures = dict(build_chart_figures(report))
-    chart_slugs = tuple(
-        slug
-        for slug in _DASHBOARD_CHART_ORDER
-        if slug != "issue-states" or report.issue_summary.total
-    )
+    chart_slugs = _DASHBOARD_CHART_ORDER
     charts = tuple(
         DashboardChart(
             slug=slug,

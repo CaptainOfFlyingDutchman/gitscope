@@ -156,6 +156,8 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
     assert "prefers-color-scheme: dark" in theme_script
     assert "localStorage" in theme_script
     assert "Plotly.relayout" in theme_script
+    assert '"hoverlabel.bgcolor"' in theme_script
+    assert 'hoverBackground: "#172337"' in theme_script
     assert "Repository Contribution Rankings" in html
     assert "Pull Request Merge Times" in html
     assert "Largest changes" in html

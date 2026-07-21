@@ -118,7 +118,7 @@ an isolated command-line tool:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.0/gitscope-0.2.0-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.1/gitscope-0.2.1-py3-none-any.whl
 gitscope --version
 ```
 
@@ -761,7 +761,7 @@ happily install from its versioned GitHub release:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.0/gitscope-0.2.0-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.1/gitscope-0.2.1-py3-none-any.whl
 ```
 
 and immediately use to generate a polished report for any GitHub organization they have access to.
