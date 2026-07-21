@@ -15,6 +15,9 @@ def run_command(executable: Path, arguments: list[str], working_directory: Path)
     """Run one installed CLI command and return its combined diagnostic output."""
     environment = os.environ.copy()
     environment.pop("GITHUB_TOKEN", None)
+    # Rich derives help-table width from COLUMNS even when output is captured.
+    # Keep option names intact and the smoke assertion deterministic in CI.
+    environment["COLUMNS"] = "120"
     completed = subprocess.run(
         [str(executable), *arguments],
         cwd=working_directory,
