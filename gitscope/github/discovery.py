@@ -25,11 +25,11 @@ class DiscoveryContext:
 
 async def discover_repositories(
     settings: Settings,
-    repository_names: tuple[str, ...],
+    repository_names: tuple[str, ...] | None,
     *,
     refresh: bool = False,
 ) -> DiscoveryContext:
-    """Validate the token and fetch only explicitly allowlisted repositories."""
+    """Validate the token and fetch the requested repository selection."""
     _prepare_cache_directory(settings.cache_directory)
     cache = JsonCache(settings.cache_directory / "graphql")
     async with GitHubHTTPClient(settings.github_token) as http:
@@ -37,11 +37,17 @@ async def discover_repositories(
         graphql = GitHubGraphQLClient(http, cache)
         service = GitHubService(graphql, rest)
         authenticated_user = await service.authenticated_user()
-        discovery = await service.repositories_by_name(
-            settings.organization,
-            repository_names,
-            refresh=refresh,
-        )
+        if repository_names is None:
+            discovery = await service.organization_repositories(
+                settings.organization,
+                refresh=refresh,
+            )
+        else:
+            discovery = await service.repositories_by_name(
+                settings.organization,
+                repository_names,
+                refresh=refresh,
+            )
     return DiscoveryContext(authenticated_user=authenticated_user, discovery=discovery)
 
 

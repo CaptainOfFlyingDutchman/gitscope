@@ -7,6 +7,16 @@ import pytest
 from gitscope.repository_scope import RepositoryScope, RepositoryScopeError
 
 
+def test_all_visible_scope_has_no_allowlist_source() -> None:
+    scope = RepositoryScope.all_visible(organization="josys-src")
+
+    assert scope.organization == "josys-src"
+    assert scope.names == ()
+    assert scope.source is None
+    assert scope.all_repositories is True
+    assert scope.source_label == "--all-repositories"
+
+
 def test_repository_scope_ignores_comments_and_duplicates(tmp_path: Path) -> None:
     path = tmp_path / "repositories"
     path.write_text(
@@ -17,6 +27,8 @@ def test_repository_scope_ignores_comments_and_duplicates(tmp_path: Path) -> Non
     scope = RepositoryScope.from_file(path, organization="josys-src")
 
     assert scope.names == ("frontend", "backend")
+    assert scope.all_repositories is False
+    assert scope.source_label == str(path)
 
 
 @pytest.mark.parametrize(

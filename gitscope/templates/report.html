@@ -103,7 +103,7 @@
     </section>
 
     <section aria-labelledby="repositories-title">
-      <div class="section-heading"><div><p class="eyebrow">Repository scope</p><h2 id="repositories-title">Contribution details</h2></div><p>Sorted by combined commits, pull requests, issues, and reviews.</p></div>
+      <div class="section-heading"><div><p class="eyebrow">Repository scope</p><h2 id="repositories-title">Contribution details</h2></div><p>Only repositories with collected activity, sorted by combined commits, pull requests, issues, and reviews.</p></div>
       <div class="table-card"><div class="table-scroll" tabindex="0"><table>
         <thead><tr><th>Repository</th><th>Language</th><th class="numeric">Commits</th><th class="numeric">PRs</th><th class="numeric">Issues</th><th class="numeric">Reviews</th><th class="numeric">Files changed</th><th>Last contribution</th></tr></thead>
         <tbody>{% for repository in repositories %}<tr><th scope="row">{{ repository.name_with_owner }}{% if repository.is_archived %}<span class="badge">Archived</span>{% endif %}</th><td>{{ repository.primary_language or '—' }}</td><td class="numeric">{{ repository.commits | number }}</td><td class="numeric">{{ repository.pull_requests | number }}</td><td class="numeric">{{ repository.issues | number }}</td><td class="numeric">{{ repository.reviews | number }}</td><td class="numeric">{{ repository.files_changed | number }}</td><td>{% if repository.last_contribution %}{{ repository.last_contribution | date }}{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="8" class="empty-state">No repository activity was collected.</td></tr>{% endfor %}</tbody>

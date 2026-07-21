@@ -118,7 +118,7 @@ an isolated command-line tool:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.1/gitscope-0.1.1-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.0/gitscope-0.2.0-py3-none-any.whl
 gitscope --version
 ```
 
@@ -147,6 +147,21 @@ Then run:
 ```bash
 uv run gitscope analyze --org my-org --user my-user
 ```
+
+The private repository allowlist is the safe default. To intentionally analyze
+every organization repository visible to the token, use:
+
+```bash
+uv run gitscope analyze \
+  --org my-org \
+  --user my-user \
+  --all-repositories
+```
+
+This mode can require substantially more API requests and time. It cannot be
+combined with `--repos-file`. GitScope inspects contribution metadata across the
+resolved visible scope, then creates full-history mirrors only for repositories
+with authored pull requests, issues, reviews, or default-branch commits.
 
 See the [installation guide](docs/installation.md) for token, repository-scope,
 identity-alias, local-wheel, privacy, and troubleshooting guidance.
@@ -746,7 +761,7 @@ happily install from its versioned GitHub release:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.1/gitscope-0.1.1-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.0/gitscope-0.2.0-py3-none-any.whl
 ```
 
 and immediately use to generate a polished report for any GitHub organization they have access to.

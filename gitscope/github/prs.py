@@ -130,18 +130,26 @@ class PullRequestCollector:
         username: str,
         *,
         refresh: bool = False,
+        organization_wide: bool = False,
     ) -> PullRequestCollection:
-        """Collect every authored PR returned by GitHub search for the allowlist."""
+        """Collect authored PRs for an allowlist or the visible organization scope."""
         pull_requests: dict[str, PullRequest] = {}
         stats = CollectionStats()
-        for repository_name in repository_names:
+        scopes: tuple[str | None, ...] = (None,) if organization_wide else repository_names
+        for repository_name in scopes:
             cursor: str | None = None
             repository_total = 0
             while True:
+                stats.require_budget(self.rate_limit_reserve)
+                scope = (
+                    f"org:{organization}"
+                    if repository_name is None
+                    else f"repo:{organization}/{repository_name}"
+                )
                 data, from_cache = await self.graphql.execute(
                     AUTHORED_PULL_REQUESTS_QUERY,
                     {
-                        "query": (f"repo:{organization}/{repository_name} is:pr author:{username}"),
+                        "query": f"{scope} is:pr author:{username}",
                         "cursor": cursor,
                     },
                     refresh=refresh,
@@ -158,10 +166,9 @@ class PullRequestCollector:
                         stats.warnings.append(
                             f"GitHub search returned {repository_total} of "
                             f"{page.search.issue_count} authored pull requests for "
-                            f"{organization}/{repository_name}."
+                            f"{scope}."
                         )
                     break
-                stats.require_budget(self.rate_limit_reserve)
                 cursor = page.search.page_info.end_cursor
                 if not cursor:
                     raise InvalidGitHubResponseError(

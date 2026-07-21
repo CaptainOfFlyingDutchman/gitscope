@@ -116,9 +116,13 @@ def _render_markdown(report: CareerReport) -> list[str]:
     lines.extend(["", "## Repository contributions", ""])
     repositories = tuple(
         sorted(
-            report.repository_analytics,
+            (
+                item
+                for item in report.repository_analytics
+                if item.commits or item.pull_requests or item.issues or item.reviews
+            ),
             key=lambda item: (
-                -(item.commits + item.pull_requests + item.reviews),
+                -(item.commits + item.pull_requests + item.issues + item.reviews),
                 item.name_with_owner,
             ),
         )

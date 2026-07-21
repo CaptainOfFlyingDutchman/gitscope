@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+from gitscope.github.errors import RateLimitSafetyError
 from gitscope.github.reviews import ReviewCollector
 from gitscope.models.review import ReviewState
 
@@ -136,3 +137,21 @@ async def test_review_collector_partitions_searches_over_github_cap() -> None:
     assert "created:" in graphql.variables[1]["query"]
     assert "created:" in graphql.variables[2]["query"]
     assert result.stats.warnings == []
+
+
+@pytest.mark.anyio
+async def test_review_collector_checks_budget_before_next_repository() -> None:
+    first = reviewed_search_page(has_more_reviews=False, issue_count=0, nodes=[])
+    first["rateLimit"]["remaining"] = 500  # type: ignore[index]
+    graphql = StubGraphQL(
+        [first, reviewed_search_page(has_more_reviews=False, issue_count=0, nodes=[])]
+    )
+
+    with pytest.raises(RateLimitSafetyError):
+        await ReviewCollector(graphql, rate_limit_reserve=500).collect(  # type: ignore[arg-type]
+            "josys-src",
+            ("one", "two"),
+            "octocat",
+        )
+
+    assert len(graphql.variables) == 1

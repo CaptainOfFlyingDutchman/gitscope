@@ -36,7 +36,7 @@ class GitHubService:
             return RepositoryDiscovery(
                 repositories=repositories,
                 source="rest",
-                api_requests=2,
+                api_requests=len(repositories) // 100 + 2,
             )
 
     async def repositories_by_name(

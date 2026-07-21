@@ -10,7 +10,7 @@ wheel as an isolated command-line tool:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.1.1/gitscope-0.1.1-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.0/gitscope-0.2.0-py3-none-any.whl
 gitscope --version
 gitscope doctor
 ```
@@ -22,7 +22,7 @@ Alternatively, install directly from the immutable Git tag:
 
 ```bash
 uv tool install \
-  'git+https://github.com/CaptainOfFlyingDutchman/gitscope.git@v0.1.1'
+  'git+https://github.com/CaptainOfFlyingDutchman/gitscope.git@v0.2.0'
 ```
 
 To upgrade later, install the new version's wheel URL with `--force`.
@@ -33,7 +33,7 @@ Release candidates can be exercised without publishing them:
 
 ```bash
 uv build
-uv tool install dist/gitscope-0.1.1-py3-none-any.whl
+uv tool install dist/gitscope-0.2.0-py3-none-any.whl
 gitscope --version
 ```
 
@@ -87,6 +87,29 @@ file associates historical Git author names and email addresses with the target
 user so renamed accounts and older commit identities remain attributable.
 
 Both files are ignored by Git because they may reveal private information.
+
+The allowlist is the recommended default. To deliberately include every
+organization repository visible to the configured token, omit `--repos-file`
+and run:
+
+```bash
+gitscope analyze \
+  --org example-org \
+  --user octocat \
+  --all-repositories
+```
+
+`--all-repositories` cannot be combined with `--repos-file`. It can materially
+increase API use and runtime. GitScope first inspects the resolved visible scope,
+then creates full-history mirrors only for repositories with contribution
+evidence. It displays both counts and stops before crossing its GraphQL
+rate-limit reserve.
+
+The commit prefilter uses the configured identity emails against each
+repository's default-branch history. Pull-request, issue, and review evidence is
+also included. A commit that exists only on an unmerged non-default branch and
+has no associated contribution metadata cannot be identified without cloning
+that repository; use the explicit allowlist when that edge case matters.
 
 ## Analyze and export
 

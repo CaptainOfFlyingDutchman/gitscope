@@ -20,7 +20,23 @@ class RepositoryScope:
 
     organization: str
     names: tuple[str, ...]
-    source: Path
+    source: Path | None
+    all_repositories: bool = False
+
+    @classmethod
+    def all_visible(cls, *, organization: str) -> RepositoryScope:
+        """Select every organization repository visible to the configured token."""
+        return cls(
+            organization=organization,
+            names=(),
+            source=None,
+            all_repositories=True,
+        )
+
+    @property
+    def source_label(self) -> str:
+        """Return a stable report label for the selected repository source."""
+        return "--all-repositories" if self.all_repositories else str(self.source)
 
     @classmethod
     def from_file(cls, path: Path, *, organization: str) -> RepositoryScope:
@@ -60,4 +76,9 @@ class RepositoryScope:
 
         if not names:
             raise RepositoryScopeError(f"Repository list '{path}' contains no repositories.")
-        return cls(organization=organization, names=tuple(names), source=path)
+        return cls(
+            organization=organization,
+            names=tuple(names),
+            source=path,
+            all_repositories=False,
+        )

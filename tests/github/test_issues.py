@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+from gitscope.github.errors import RateLimitSafetyError
 from gitscope.github.issues import IssueCollector
 from gitscope.models.issue import IssueState
 
@@ -104,3 +105,19 @@ async def test_issue_collector_warns_about_truncated_search() -> None:
 
     assert len(result.stats.warnings) == 1
     assert "returned 1 of 2" in result.stats.warnings[0]
+
+
+@pytest.mark.anyio
+async def test_issue_collector_checks_budget_before_next_repository() -> None:
+    first = issue_page([], has_next_page=False, cursor=None, issue_count=0)
+    first["rateLimit"]["remaining"] = 500  # type: ignore[index]
+    graphql = StubGraphQL([first, issue_page([], has_next_page=False, cursor=None, issue_count=0)])
+
+    with pytest.raises(RateLimitSafetyError):
+        await IssueCollector(graphql, rate_limit_reserve=500).collect(  # type: ignore[arg-type]
+            "josys-src",
+            ("one", "two"),
+            "octocat",
+        )
+
+    assert len(graphql.variables) == 1

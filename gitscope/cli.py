@@ -19,6 +19,7 @@ from gitscope.cache import CacheTarget, clear_cache, inspect_cache
 from gitscope.config import ConfigurationError, Settings
 from gitscope.diagnostics import DiagnosticStatus, run_diagnostics
 from gitscope.git.identities import DEFAULT_IDENTITIES_FILE, IdentityFileError
+from gitscope.github.discovery import DiscoveryContext
 from gitscope.github.errors import GitHubError
 from gitscope.logging import DEFAULT_LOG_FILE, configure_logging
 from gitscope.models.report import CareerReport
@@ -90,12 +91,22 @@ def analyze(
         typer.Option("--refresh", help="Ignore cached GitHub responses."),
     ] = False,
     repositories_file: Annotated[
-        Path,
+        Path | None,
         typer.Option(
             "--repos-file",
-            help="Private allowlist containing one owner/name repository per line.",
+            help=(
+                "Private allowlist containing one owner/name repository per line. "
+                "Defaults to .gitscope-repositories."
+            ),
         ),
-    ] = DEFAULT_REPOSITORIES_FILE,
+    ] = None,
+    all_repositories: Annotated[
+        bool,
+        typer.Option(
+            "--all-repositories",
+            help="Analyze every organization repository visible to the GitHub token.",
+        ),
+    ] = False,
     identities_file: Annotated[
         Path,
         typer.Option(
@@ -115,6 +126,13 @@ def analyze(
 ) -> None:
     """Collect scoped contributions and write a versioned JSON career report."""
     logger.info("Analysis started")
+    if all_repositories and repositories_file is not None:
+        error_console.print(
+            "[bold red]Repository selection error:[/bold red] "
+            "--all-repositories cannot be combined with --repos-file."
+        )
+        raise typer.Exit(code=2)
+
     try:
         settings = Settings.from_environment(
             organization=organization,
@@ -126,15 +144,23 @@ def analyze(
         error_console.print(f"[bold red]Configuration error:[/bold red] {exc}")
         raise typer.Exit(code=2) from exc
 
-    try:
-        repository_scope = RepositoryScope.from_file(
-            repositories_file,
-            organization=settings.organization,
+    if all_repositories:
+        repository_scope = RepositoryScope.all_visible(organization=settings.organization)
+        console.print(
+            "[bold yellow]All-repositories mode:[/bold yellow] every repository in "
+            f"[bold]{settings.organization}[/bold] visible to this token will be inspected; "
+            "only contribution candidates will be cloned."
         )
-    except RepositoryScopeError as exc:
-        logger.warning("Repository scope validation failed: %s", type(exc).__name__)
-        error_console.print(f"[bold red]Repository list error:[/bold red] {exc}")
-        raise typer.Exit(code=2) from exc
+    else:
+        try:
+            repository_scope = RepositoryScope.from_file(
+                repositories_file or DEFAULT_REPOSITORIES_FILE,
+                organization=settings.organization,
+            )
+        except RepositoryScopeError as exc:
+            logger.warning("Repository scope validation failed: %s", type(exc).__name__)
+            error_console.print(f"[bold red]Repository list error:[/bold red] {exc}")
+            raise typer.Exit(code=2) from exc
 
     try:
         with console.status("Collecting GitHub contributions..."):
@@ -145,6 +171,8 @@ def analyze(
                     refresh=refresh,
                     identities_file=identities_file,
                     git_concurrency=git_concurrency,
+                    scope_observer=(_print_all_repositories_scope if all_repositories else None),
+                    git_scope_observer=(_print_selected_git_scope if all_repositories else None),
                 )
             )
     except (GitHubError, IdentityFileError) as exc:
@@ -160,8 +188,9 @@ def analyze(
     console.print(
         f"[green]Authenticated as[/green] [bold]{context.authenticated_user.login}[/bold]."
     )
+    repository_label = "visible" if repository_scope.all_repositories else "allowlisted"
     console.print(
-        f"Validated [bold]{repository_count}[/bold] allowlisted repositories in "
+        f"Validated [bold]{repository_count}[/bold] {repository_label} repositories in "
         f"[bold]{settings.organization}[/bold] "
         f"([bold]{private_count}[/bold] private)."
     )
@@ -205,6 +234,27 @@ def analyze(
         report.pull_request_summary.total,
         report.issue_summary.total,
         report.review_summary.total,
+    )
+
+
+def _print_all_repositories_scope(context: DiscoveryContext) -> None:
+    """Confirm the resolved all-repositories scope before deeper collection begins."""
+    repositories = context.discovery.repositories
+    private_count = sum(repository.is_private for repository in repositories)
+    console.print(
+        f"[bold yellow]Resolved all-repositories scope:[/bold yellow] "
+        f"[bold]{len(repositories)}[/bold] visible repositories "
+        f"([bold]{private_count}[/bold] private). "
+        "Inspecting contribution metadata before Git cloning."
+    )
+
+
+def _print_selected_git_scope(inspected: int, selected: int) -> None:
+    """Report how many visible repositories need full-history Git analysis."""
+    console.print(
+        f"[bold yellow]Contribution prefilter:[/bold yellow] selected "
+        f"[bold]{selected}[/bold] of [bold]{inspected}[/bold] visible repositories "
+        "for full-history Git analysis."
     )
 
 
@@ -479,7 +529,7 @@ def _print_contribution_summary(report: CareerReport) -> None:
     table.add_row("Authored pull requests", f"{report.pull_request_summary.total:,}")
     table.add_row("Authored issues", f"{report.issue_summary.total:,}")
     table.add_row("Submitted reviews", f"{report.review_summary.total:,}")
-    table.add_row("Repositories", f"{report.collection.repository_count:,}")
+    table.add_row("Repositories in scope", f"{report.collection.repository_count:,}")
     table.add_row("Active days", f"{report.timeline.active_days:,}")
     console.print(table)
 

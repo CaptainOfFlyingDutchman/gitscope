@@ -42,7 +42,8 @@ CLI and local configuration
   behavior.
 - `gitscope/config.py` validates runtime settings and retrieves the token from
   the environment.
-- `gitscope/repository_scope.py` validates the private repository allowlist.
+- `gitscope/repository_scope.py` validates the private repository allowlist and
+  represents explicit all-visible-repositories selection.
 - `gitscope/diagnostics.py`, `gitscope/cache.py`, and `gitscope/logging.py`
   provide local diagnostics, bounded cache operations, and sanitized logging.
 
@@ -66,9 +67,20 @@ enumeration, historical identity matching, and contributed-file statistics.
 Full history is intentional: shallow clones would make lifetime counts and alias
 matching incomplete.
 
-Only repositories in `.gitscope-repositories` enter this pipeline. Concurrency
-is bounded by the CLI option, and individual repository failures are represented
-as warnings rather than silently changing successful results.
+By default, every repository in `.gitscope-repositories` enters this pipeline.
+The explicit `--all-repositories` mode instead uses paginated organization
+discovery, contribution metadata, and batched default-branch commit-presence
+queries to select repositories before cloning. The full visible scope remains
+recorded in report metadata, while only repositories with evidence of authored
+pull requests, issues, reviews, or commits receive full bare mirrors. The modes
+are mutually exclusive. Concurrency is bounded by the CLI option, and individual
+repository failures are represented as warnings rather than silently changing
+successful results.
+
+Default-branch commit presence is matched by configured author email. Commits
+that exist only on unmerged non-default branches without related pull-request,
+issue, or review activity require an explicit allowlist entry to guarantee local
+inspection.
 
 ### Analytics
 

@@ -7,7 +7,7 @@ from pathlib import Path
 from gitscope.models.commit import CommitContribution
 from gitscope.models.issue import Issue, IssueState
 from gitscope.models.pull_request import PullRequest, PullRequestState
-from gitscope.models.report import IssueSummary
+from gitscope.models.report import IssueSummary, RepositoryContributionSummary
 from gitscope.models.review import PullRequestReview, ReviewState
 from gitscope.report.html import build_contribution_heatmap, write_html_report
 from tests.report.test_json import empty_report
@@ -98,6 +98,36 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
         update={
             "issue_summary": IssueSummary(total=1, open=1, closed=0),
             "issues": (issue,),
+            "repository_analytics": (
+                RepositoryContributionSummary(
+                    name_with_owner="josys-src/frontend",
+                    primary_language="TypeScript",
+                    is_archived=False,
+                    commits=0,
+                    pull_requests=0,
+                    issues=1,
+                    reviews=0,
+                    additions=0,
+                    deletions=0,
+                    files_changed=0,
+                    first_contribution=timestamp,
+                    last_contribution=timestamp,
+                ),
+                RepositoryContributionSummary(
+                    name_with_owner="josys-src/no-activity",
+                    primary_language="Python",
+                    is_archived=False,
+                    commits=0,
+                    pull_requests=0,
+                    issues=0,
+                    reviews=0,
+                    additions=0,
+                    deletions=0,
+                    files_changed=0,
+                    first_contribution=None,
+                    last_contribution=None,
+                ),
+            ),
         }
     )
 
@@ -141,4 +171,7 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
     assert "Issue Outcomes" in html
     assert "Recently updated issues" in html
     assert "Track &lt;unsafe&gt; dashboard work" in html
+    assert "josys-src/frontend" in html
+    assert "josys-src/no-activity" not in html
+    assert "Only repositories with collected activity" in html
     assert html.count("plotly-graph-div") == 13

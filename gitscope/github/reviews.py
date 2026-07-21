@@ -150,11 +150,13 @@ class ReviewCollector:
         username: str,
         *,
         refresh: bool = False,
+        organization_wide: bool = False,
     ) -> ReviewCollection:
-        """Collect all reviews authored by the target user for allowlisted repositories."""
+        """Collect reviews for an allowlist or the visible organization scope."""
         reviews: dict[str, PullRequestReview] = {}
         stats = CollectionStats()
-        for repository_name in repository_names:
+        scopes: tuple[str | None, ...] = (None,) if organization_wide else repository_names
+        for repository_name in scopes:
             await self._collect_search_window(
                 reviews,
                 stats,
@@ -178,7 +180,7 @@ class ReviewCollector:
         reviews: dict[str, PullRequestReview],
         stats: CollectionStats,
         organization: str,
-        repository_name: str,
+        repository_name: str | None,
         username: str,
         *,
         window: _DateWindow | None,
@@ -187,7 +189,13 @@ class ReviewCollector:
         cursor: str | None = None
         candidate_total = 0
         while True:
-            query = f"repo:{organization}/{repository_name} is:pr reviewed-by:{username}"
+            stats.require_budget(self.rate_limit_reserve)
+            scope = (
+                f"org:{organization}"
+                if repository_name is None
+                else f"repo:{organization}/{repository_name}"
+            )
+            query = f"{scope} is:pr reviewed-by:{username}"
             if window is not None:
                 query = f"{query} {window.qualifier}"
             data, from_cache = await self.graphql.execute(
@@ -254,10 +262,9 @@ class ReviewCollector:
                     stats.warnings.append(
                         f"GitHub search returned {candidate_total} of "
                         f"{page.search.issue_count} reviewed pull requests for "
-                        f"{organization}/{repository_name}{qualifier}."
+                        f"{scope}{qualifier}."
                     )
                 return
-            stats.require_budget(self.rate_limit_reserve)
             cursor = page.search.page_info.end_cursor
             if not cursor:
                 raise InvalidGitHubResponseError(

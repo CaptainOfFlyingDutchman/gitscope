@@ -51,6 +51,9 @@ def smoke_test(executable: Path, report_path: Path, expected_version: str) -> No
         for command in ("analyze", "cache", "doctor", "export", "resume"):
             if command not in help_output:
                 raise RuntimeError(f"Installed help is missing the {command} command")
+        analyze_help = run_command(executable, ["analyze", "--help"], working_directory)
+        if "--all-repositories" not in analyze_help:
+            raise RuntimeError("Installed analyze help is missing --all-repositories")
 
         run_command(
             executable,

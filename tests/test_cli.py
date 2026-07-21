@@ -215,6 +215,58 @@ def test_analyze_requires_token() -> None:
     assert "GITHUB_TOKEN is not configured" in result.stderr
 
 
+def test_analyze_rejects_multiple_repository_selection_modes(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--org",
+            "josys-src",
+            "--user",
+            "CaptainOfFlyingDutchman",
+            "--all-repositories",
+            "--repos-file",
+            str(tmp_path / "repositories"),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--all-repositories cannot be combined with" in result.stderr
+    assert "--repos-file" in result.stderr
+
+
+def test_analyze_accepts_explicit_all_repositories_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def capture_scope(
+        _settings: Settings,
+        repository_scope: RepositoryScope,
+        **_kwargs: object,
+    ) -> GeneratedCareerReport:
+        assert repository_scope.all_repositories is True
+        assert repository_scope.source_label == "--all-repositories"
+        assert callable(_kwargs["scope_observer"])
+        raise AuthenticationError("stop after scope validation")
+
+    monkeypatch.setattr("gitscope.cli.generate_career_report", capture_scope)
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--org",
+            "josys-src",
+            "--user",
+            "CaptainOfFlyingDutchman",
+            "--all-repositories",
+        ],
+        env={"GITHUB_TOKEN": "secret-token"},
+    )
+
+    assert result.exit_code == 1
+    assert "All-repositories mode" in result.stdout
+    assert "every repository" in result.stdout
+
+
 def test_analyze_generates_report(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -227,6 +279,8 @@ def test_analyze_generates_report(
         rate_limit_reserve: int = 500,
         identities_file: Path = Path(".gitscope-identities"),
         git_concurrency: int = 4,
+        scope_observer: object | None = None,
+        git_scope_observer: object | None = None,
     ) -> GeneratedCareerReport:
         assert settings.organization == "josys-src"
         assert repository_scope.names == ("frontend",)
@@ -234,6 +288,8 @@ def test_analyze_generates_report(
         assert rate_limit_reserve == 500
         assert identities_file == Path(".gitscope-identities")
         assert git_concurrency == 4
+        assert scope_observer is None
+        assert git_scope_observer is None
         context = DiscoveryContext(
             authenticated_user=AuthenticatedUser(login="octocat", id=1),
             discovery=RepositoryDiscovery(
@@ -368,11 +424,15 @@ def test_analyze_reports_github_error(
         rate_limit_reserve: int = 500,
         identities_file: Path = Path(".gitscope-identities"),
         git_concurrency: int = 4,
+        scope_observer: object | None = None,
+        git_scope_observer: object | None = None,
     ) -> GeneratedCareerReport:
         del refresh
         del rate_limit_reserve
         del identities_file
         del git_concurrency
+        del scope_observer
+        del git_scope_observer
         raise AuthenticationError("token rejected")
 
     monkeypatch.setattr("gitscope.cli.generate_career_report", rejected_generation)

@@ -1,2 +1,4 @@
 # One repository per line
+# To intentionally analyze every visible organization repository instead, use
+# --all-repositories without --repos-file. The allowlist remains the safe default.
 <repo_owner>/<repo_name>

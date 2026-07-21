@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,18 +19,22 @@ from gitscope.config import Settings
 from gitscope.git.collection import collect_git_contributions
 from gitscope.git.identities import DEFAULT_IDENTITIES_FILE, AuthorIdentities
 from gitscope.github.collection import CollectionStats
+from gitscope.github.commit_presence import CommitPresenceCollector
 from gitscope.github.discovery import DiscoveryContext, discover_repositories
 from gitscope.github.graphql import GitHubGraphQLClient
 from gitscope.github.http import GitHubHTTPClient
 from gitscope.github.issues import IssueCollector
 from gitscope.github.prs import PullRequestCollector
 from gitscope.github.reviews import ReviewCollector
+from gitscope.models.issue import Issue
+from gitscope.models.pull_request import PullRequest
 from gitscope.models.report import (
     CareerReport,
     CollectionMetadata,
     ReportIdentity,
     ReportRepository,
 )
+from gitscope.models.review import PullRequestReview
 from gitscope.report.csv import write_csv_report
 from gitscope.report.html import write_html_report
 from gitscope.report.json import write_json_report
@@ -58,14 +63,26 @@ async def generate_career_report(
     rate_limit_reserve: int = 500,
     identities_file: Path = DEFAULT_IDENTITIES_FILE,
     git_concurrency: int = 4,
+    scope_observer: Callable[[DiscoveryContext], None] | None = None,
+    git_scope_observer: Callable[[int, int], None] | None = None,
 ) -> GeneratedCareerReport:
     """Collect scoped GitHub contributions and atomically write report.json."""
     context = await discover_repositories(
         settings,
-        repository_scope.names,
+        None if repository_scope.all_repositories else repository_scope.names,
         refresh=refresh,
     )
+    if scope_observer is not None:
+        scope_observer(context)
+    repository_names = tuple(repository.name for repository in context.discovery.repositories)
+    identities = AuthorIdentities.build(
+        username=settings.username,
+        database_id=context.authenticated_user.database_id,
+        github_name=context.authenticated_user.name,
+        source=identities_file,
+    )
     stats = _discovery_stats(context)
+    contributed_repositories: frozenset[str] | None = None
     cache = JsonCache(settings.cache_directory / "graphql")
     async with GitHubHTTPClient(settings.github_token) as http:
         graphql = GitHubGraphQLClient(http, cache)
@@ -74,9 +91,10 @@ async def generate_career_report(
             rate_limit_reserve=rate_limit_reserve,
         ).collect(
             settings.organization,
-            repository_scope.names,
+            repository_names,
             settings.username,
             refresh=refresh,
+            organization_wide=repository_scope.all_repositories,
         )
         stats.merge(pull_request_collection.stats)
         issue_collection = await IssueCollector(
@@ -84,9 +102,10 @@ async def generate_career_report(
             rate_limit_reserve=rate_limit_reserve,
         ).collect(
             settings.organization,
-            repository_scope.names,
+            repository_names,
             settings.username,
             refresh=refresh,
+            organization_wide=repository_scope.all_repositories,
         )
         stats.merge(issue_collection.stats)
         review_collection = await ReviewCollector(
@@ -94,20 +113,40 @@ async def generate_career_report(
             rate_limit_reserve=rate_limit_reserve,
         ).collect(
             settings.organization,
-            repository_scope.names,
+            repository_names,
             settings.username,
             refresh=refresh,
+            organization_wide=repository_scope.all_repositories,
         )
         stats.merge(review_collection.stats)
+        if repository_scope.all_repositories:
+            commit_presence = await CommitPresenceCollector(
+                graphql,
+                rate_limit_reserve=rate_limit_reserve,
+            ).collect(
+                settings.organization,
+                repository_names,
+                identities.emails,
+                refresh=refresh,
+            )
+            stats.merge(commit_presence.stats)
+            contributed_repositories = _contributed_repository_names(
+                pull_request_collection.pull_requests,
+                issue_collection.issues,
+                review_collection.reviews,
+                commit_presence.repositories,
+            )
 
-    identities = AuthorIdentities.build(
-        username=settings.username,
-        database_id=context.authenticated_user.database_id,
-        github_name=context.authenticated_user.name,
-        source=identities_file,
+    git_repositories = tuple(
+        repository.name_with_owner
+        for repository in context.discovery.repositories
+        if contributed_repositories is None
+        or repository.name_with_owner in contributed_repositories
     )
+    if git_scope_observer is not None:
+        git_scope_observer(len(context.discovery.repositories), len(git_repositories))
     git_collection = collect_git_contributions(
-        tuple(repository.name_with_owner for repository in context.discovery.repositories),
+        git_repositories,
         cache_directory=settings.cache_directory,
         token=settings.github_token,
         identities=identities,
@@ -138,7 +177,7 @@ async def generate_career_report(
         ),
         collection=CollectionMetadata(
             generated_at=generated_at,
-            repository_scope_file=str(repository_scope.source),
+            repository_scope_file=repository_scope.source_label,
             repository_count=len(context.discovery.repositories),
             github_api_requests=stats.api_requests,
             github_cache_hits=stats.cache_hits,
@@ -207,3 +246,19 @@ def _discovery_stats(context: DiscoveryContext) -> CollectionStats:
     if not discovery.from_cache:
         stats.latest_rate_limit = discovery.rate_limit
     return stats
+
+
+def _contributed_repository_names(
+    pull_requests: tuple[PullRequest, ...],
+    issues: tuple[Issue, ...],
+    reviews: tuple[PullRequestReview, ...],
+    commit_repositories: frozenset[str],
+) -> frozenset[str]:
+    return frozenset(
+        {
+            *(item.repository for item in pull_requests),
+            *(item.repository for item in issues),
+            *(item.repository for item in reviews),
+            *commit_repositories,
+        }
+    )
