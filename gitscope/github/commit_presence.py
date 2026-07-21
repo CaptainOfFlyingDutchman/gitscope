@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from gitscope.date_range import LIFETIME_DATE_RANGE, DateRange
 from gitscope.github.collection import CollectionStats
 from gitscope.github.errors import InvalidGitHubResponseError
 from gitscope.github.graphql import GitHubGraphQLClient
@@ -57,6 +58,7 @@ class CommitPresenceCollector:
         emails: frozenset[str],
         *,
         refresh: bool = False,
+        date_range: DateRange = LIFETIME_DATE_RANGE,
     ) -> CommitPresenceCollection:
         """Return repositories with authored commits reachable from their default branch."""
         repositories: set[str] = set()
@@ -65,7 +67,7 @@ class CommitPresenceCollector:
         for start in range(0, len(repository_names), COMMIT_PRESENCE_BATCH_SIZE):
             stats.require_budget(self.rate_limit_reserve)
             batch = repository_names[start : start + COMMIT_PRESENCE_BATCH_SIZE]
-            query, variables = _build_query(organization, batch, ordered_emails)
+            query, variables = _build_query(organization, batch, ordered_emails, date_range)
             data, from_cache = await self.graphql.execute(
                 query,
                 variables,
@@ -88,10 +90,22 @@ def _build_query(
     organization: str,
     repository_names: tuple[str, ...],
     emails: list[str],
+    date_range: DateRange = LIFETIME_DATE_RANGE,
 ) -> tuple[str, dict[str, object]]:
     definitions = ["$owner: String!", "$emails: [String!]!"]
+    history_arguments = ["first: 1", "author: {emails: $emails}"]
+    if date_range.since_timestamp is not None:
+        definitions.append("$since: GitTimestamp")
+        history_arguments.append("since: $since")
+    if date_range.until_timestamp is not None:
+        definitions.append("$until: GitTimestamp")
+        history_arguments.append("until: $until")
     fields: list[str] = []
     variables: dict[str, object] = {"owner": organization, "emails": emails}
+    if date_range.since_timestamp is not None:
+        variables["since"] = date_range.since_timestamp
+    if date_range.until_timestamp is not None:
+        variables["until"] = date_range.until_timestamp
     for index, repository_name in enumerate(repository_names):
         variable = f"name{index}"
         definitions.append(f"${variable}: String!")
@@ -103,7 +117,7 @@ def _build_query(
     defaultBranchRef {{
       target {{
         ... on Commit {{
-          history(first: 1, author: {{emails: $emails}}) {{ totalCount }}
+          history({", ".join(history_arguments)}) {{ totalCount }}
         }}
       }}
     }}

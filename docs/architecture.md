@@ -67,6 +67,13 @@ enumeration, historical identity matching, and contributed-file statistics.
 Full history is intentional: shallow clones would make lifetime counts and alias
 matching incomplete.
 
+Optional analysis dates are inclusive UTC calendar bounds. They filter commits
+by author timestamp before commit and changed-file aggregates are accumulated.
+Pull requests and issues are selected by creation timestamp, while reviews are
+filtered by submission timestamp. GitHub does not expose a review-submission
+search qualifier, so review candidates remain exhaustive and are filtered after
+collection. Full bare mirrors remain intentional even for bounded analysis.
+
 By default, every repository in `.gitscope-repositories` enters this pipeline.
 The explicit `--all-repositories` mode instead uses paginated organization
 discovery, contribution metadata, and batched default-branch commit-presence
@@ -76,6 +83,11 @@ pull requests, issues, reviews, or commits receive full bare mirrors. The modes
 are mutually exclusive. Concurrency is bounded by the CLI option, and individual
 repository failures are represented as warnings rather than silently changing
 successful results.
+
+When dates are selected, the commit-presence query uses the same bounds so
+all-repositories mode does not clone a repository based only on commits outside
+the requested window. Pull-request, issue, and review candidates are combined
+only after their activity timestamps pass the range.
 
 Default-branch commit presence is matched by configured author email. Commits
 that exist only on unmerged non-default branches without related pull-request,

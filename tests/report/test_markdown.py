@@ -54,6 +54,7 @@ def test_write_markdown_report_is_private_complete_and_portable(tmp_path: Path) 
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert "# GitScope Career Report — octo\\_cat" in markdown
     assert "## Contribution overview" in markdown
+    assert "Analysis window (UTC): **Lifetime**" in markdown
     assert "## Repository contributions" in markdown
     assert "josys-src/active" in markdown
     assert "josys-src/inactive" not in markdown

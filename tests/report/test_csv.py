@@ -86,7 +86,9 @@ def test_write_csv_report_normalizes_activity_and_neutralizes_formulas(tmp_path:
         "pull_request",
         "review",
     ]
-    assert all(row["schema_version"] == "1.5" for row in rows)
+    assert all(row["schema_version"] == "1.6" for row in rows)
+    assert all(row["analysis_start"] == "" for row in rows)
+    assert all(row["analysis_end"] == "" for row in rows)
     assert rows[0]["additions"] == "10"
     assert rows[0]["is_merge"] == "false"
     assert rows[1]["issue_number"] == "3"

@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from gitscope.date_range import LIFETIME_DATE_RANGE, DateRange
 from gitscope.github.collection import CollectionStats
 from gitscope.github.errors import InvalidGitHubResponseError
 from gitscope.github.graphql import GitHubGraphQLClient
@@ -151,6 +152,7 @@ class ReviewCollector:
         *,
         refresh: bool = False,
         organization_wide: bool = False,
+        date_range: DateRange = LIFETIME_DATE_RANGE,
     ) -> ReviewCollection:
         """Collect reviews for an allowlist or the visible organization scope."""
         reviews: dict[str, PullRequestReview] = {}
@@ -167,9 +169,14 @@ class ReviewCollector:
                 refresh=refresh,
             )
 
+        filtered = (
+            review
+            for review in reviews.values()
+            if date_range.contains(review.submitted_at or review.created_at)
+        )
         ordered = tuple(
             sorted(
-                reviews.values(),
+                filtered,
                 key=lambda item: (item.submitted_at or item.created_at, item.repository),
             )
         )

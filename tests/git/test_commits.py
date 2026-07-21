@@ -1,8 +1,10 @@
 """Integration tests against a local Git history."""
 
 import subprocess
+from datetime import date
 from pathlib import Path
 
+from gitscope.date_range import DateRange
 from gitscope.git.commits import analyze_repository_commits
 from gitscope.git.identities import AuthorIdentities
 
@@ -41,3 +43,12 @@ def test_collect_repository_commits_matches_identity_and_numstat(tmp_path: Path)
     assert analysis.file_changes[0].extension == ".txt"
     assert analysis.file_changes[0].language == "Text"
     assert analysis.file_changes[0].additions == 2
+
+    excluded = analyze_repository_commits(
+        "org/repo",
+        tmp_path,
+        identities,
+        DateRange(until=date(2020, 12, 31)),
+    )
+    assert excluded.commits == ()
+    assert excluded.file_changes == ()

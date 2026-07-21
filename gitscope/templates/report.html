@@ -31,7 +31,7 @@
       <dl class="hero__meta">
         <div><dt>Generated</dt><dd>{{ report.collection.generated_at | date }}</dd></div>
         <div><dt>Scope</dt><dd>{{ report.organization }}</dd></div>
-        <div><dt>Period</dt><dd>{% if report.timeline.first_contribution %}{{ report.timeline.first_contribution | date }} – {{ report.timeline.last_contribution | date }}{% else %}No activity collected{% endif %}</dd></div>
+        <div><dt>Analysis window</dt><dd>{{ analysis_period }}</dd></div>
       </dl>
     </div>
   </header>

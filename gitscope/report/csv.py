@@ -13,6 +13,8 @@ _HEADERS = (
     "schema_version",
     "organization",
     "username",
+    "analysis_start",
+    "analysis_end",
     "record_type",
     "occurred_at",
     "updated_at",
@@ -41,6 +43,8 @@ class ActivityRow:
     schema_version: str
     organization: str
     username: str
+    analysis_start: str
+    analysis_end: str
     record_type: str
     occurred_at: str
     updated_at: str
@@ -82,7 +86,13 @@ def write_csv_report(report: CareerReport, output_directory: Path) -> Path:
 
 
 def _activity_rows(report: CareerReport) -> tuple[ActivityRow, ...]:
-    shared = (report.schema_version, report.organization, report.identity.username)
+    shared = (
+        report.schema_version,
+        report.organization,
+        report.identity.username,
+        report.collection.analysis_start.isoformat() if report.collection.analysis_start else "",
+        report.collection.analysis_end.isoformat() if report.collection.analysis_end else "",
+    )
     commits = tuple(
         ActivityRow(
             *shared,

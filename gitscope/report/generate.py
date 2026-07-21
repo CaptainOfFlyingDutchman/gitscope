@@ -16,6 +16,7 @@ from gitscope.analytics.timeline import build_timeline
 from gitscope.cache import JsonCache
 from gitscope.charts import write_chart_bundle
 from gitscope.config import Settings
+from gitscope.date_range import LIFETIME_DATE_RANGE, DateRange
 from gitscope.git.collection import collect_git_contributions
 from gitscope.git.identities import DEFAULT_IDENTITIES_FILE, AuthorIdentities
 from gitscope.github.collection import CollectionStats
@@ -65,6 +66,7 @@ async def generate_career_report(
     git_concurrency: int = 4,
     scope_observer: Callable[[DiscoveryContext], None] | None = None,
     git_scope_observer: Callable[[int, int], None] | None = None,
+    date_range: DateRange = LIFETIME_DATE_RANGE,
 ) -> GeneratedCareerReport:
     """Collect scoped GitHub contributions and atomically write report.json."""
     context = await discover_repositories(
@@ -95,6 +97,7 @@ async def generate_career_report(
             settings.username,
             refresh=refresh,
             organization_wide=repository_scope.all_repositories,
+            date_range=date_range,
         )
         stats.merge(pull_request_collection.stats)
         issue_collection = await IssueCollector(
@@ -106,6 +109,7 @@ async def generate_career_report(
             settings.username,
             refresh=refresh,
             organization_wide=repository_scope.all_repositories,
+            date_range=date_range,
         )
         stats.merge(issue_collection.stats)
         review_collection = await ReviewCollector(
@@ -117,6 +121,7 @@ async def generate_career_report(
             settings.username,
             refresh=refresh,
             organization_wide=repository_scope.all_repositories,
+            date_range=date_range,
         )
         stats.merge(review_collection.stats)
         if repository_scope.all_repositories:
@@ -128,6 +133,7 @@ async def generate_career_report(
                 repository_names,
                 identities.emails,
                 refresh=refresh,
+                date_range=date_range,
             )
             stats.merge(commit_presence.stats)
             contributed_repositories = _contributed_repository_names(
@@ -152,6 +158,7 @@ async def generate_career_report(
         identities=identities,
         refresh=refresh,
         concurrency=git_concurrency,
+        date_range=date_range,
     )
     report_repositories = tuple(
         ReportRepository(
@@ -177,6 +184,8 @@ async def generate_career_report(
         ),
         collection=CollectionMetadata(
             generated_at=generated_at,
+            analysis_start=date_range.since,
+            analysis_end=date_range.until,
             repository_scope_file=repository_scope.source_label,
             repository_count=len(context.discovery.repositories),
             github_api_requests=stats.api_requests,

@@ -87,7 +87,7 @@ def test_json_report_round_trips_with_private_permissions(tmp_path: Path) -> Non
     path = write_json_report(empty_report(), output_directory)
     restored = CareerReport.model_validate_json(path.read_text(encoding="utf-8"))
 
-    assert restored.schema_version == "1.5"
+    assert restored.schema_version == "1.6"
     assert restored.organization == "josys-src"
     assert stat.S_IMODE(output_directory.stat().st_mode) == 0o700
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
@@ -115,3 +115,15 @@ def test_schema_13_report_remains_readable() -> None:
     assert restored.schema_version == "1.3"
     assert restored.pull_request_summary.average_merge_time_hours is None
     assert restored.pull_request_summary.longest_running == ()
+
+
+def test_schema_15_report_without_date_metadata_remains_readable() -> None:
+    payload = empty_report().model_dump(mode="json")
+    payload["schema_version"] = "1.5"
+    payload["collection"].pop("analysis_start")
+    payload["collection"].pop("analysis_end")
+
+    restored = CareerReport.model_validate(payload)
+
+    assert restored.collection.analysis_start is None
+    assert restored.collection.analysis_end is None

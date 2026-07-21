@@ -7,6 +7,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from gitscope.date_range import LIFETIME_DATE_RANGE, DateRange
 from gitscope.github.collection import CollectionStats
 from gitscope.github.errors import InvalidGitHubResponseError
 from gitscope.github.graphql import GitHubGraphQLClient
@@ -131,6 +132,7 @@ class PullRequestCollector:
         *,
         refresh: bool = False,
         organization_wide: bool = False,
+        date_range: DateRange = LIFETIME_DATE_RANGE,
     ) -> PullRequestCollection:
         """Collect authored PRs for an allowlist or the visible organization scope."""
         pull_requests: dict[str, PullRequest] = {}
@@ -146,10 +148,14 @@ class PullRequestCollector:
                     if repository_name is None
                     else f"repo:{organization}/{repository_name}"
                 )
+                qualifier = date_range.search_qualifier
+                query = f"{scope} is:pr author:{username}"
+                if qualifier:
+                    query = f"{query} {qualifier}"
                 data, from_cache = await self.graphql.execute(
                     AUTHORED_PULL_REQUESTS_QUERY,
                     {
-                        "query": f"{scope} is:pr author:{username}",
+                        "query": query,
                         "cursor": cursor,
                     },
                     refresh=refresh,
@@ -176,7 +182,10 @@ class PullRequestCollector:
                     )
 
         ordered = tuple(
-            sorted(pull_requests.values(), key=lambda item: (item.created_at, item.repository))
+            sorted(
+                (item for item in pull_requests.values() if date_range.contains(item.created_at)),
+                key=lambda item: (item.created_at, item.repository),
+            )
         )
         return PullRequestCollection(pull_requests=ordered, stats=stats)
 

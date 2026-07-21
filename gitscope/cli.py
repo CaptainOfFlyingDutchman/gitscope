@@ -17,6 +17,7 @@ from rich.table import Table
 from gitscope import __version__
 from gitscope.cache import CacheTarget, clear_cache, inspect_cache
 from gitscope.config import ConfigurationError, Settings
+from gitscope.date_range import DateRange, DateRangeError
 from gitscope.diagnostics import DiagnosticStatus, run_diagnostics
 from gitscope.git.identities import DEFAULT_IDENTITIES_FILE, IdentityFileError
 from gitscope.github.discovery import DiscoveryContext
@@ -86,6 +87,20 @@ def analyze(
         Path,
         typer.Option("--output", "-o", help="Directory for generated report files."),
     ] = Path("career-report"),
+    since: Annotated[
+        str | None,
+        typer.Option(
+            "--since",
+            help="Include contributions on or after this UTC date (YYYY-MM-DD).",
+        ),
+    ] = None,
+    until: Annotated[
+        str | None,
+        typer.Option(
+            "--until",
+            help="Include contributions on or before this UTC date (YYYY-MM-DD).",
+        ),
+    ] = None,
     refresh: Annotated[
         bool,
         typer.Option("--refresh", help="Ignore cached GitHub responses."),
@@ -134,6 +149,12 @@ def analyze(
         raise typer.Exit(code=2)
 
     try:
+        date_range = DateRange.parse(since, until)
+    except DateRangeError as exc:
+        error_console.print(f"[bold red]Date range error:[/bold red] {exc}")
+        raise typer.Exit(code=2) from exc
+
+    try:
         settings = Settings.from_environment(
             organization=organization,
             username=username,
@@ -171,6 +192,7 @@ def analyze(
                     refresh=refresh,
                     identities_file=identities_file,
                     git_concurrency=git_concurrency,
+                    date_range=date_range,
                     scope_observer=(_print_all_repositories_scope if all_repositories else None),
                     git_scope_observer=(_print_selected_git_scope if all_repositories else None),
                 )
@@ -195,6 +217,10 @@ def analyze(
         f"([bold]{private_count}[/bold] private)."
     )
     console.print(f"Source: {context.discovery.source.replace('-', ' ')}.")
+    if not date_range.is_lifetime:
+        start = date_range.since.isoformat() if date_range.since else "the beginning"
+        end = date_range.until.isoformat() if date_range.until else "present"
+        console.print(f"Analysis window (UTC): [bold]{start}[/bold] through [bold]{end}[/bold].")
     _print_contribution_summary(report)
     console.print(
         f"Classified contributed changes across "

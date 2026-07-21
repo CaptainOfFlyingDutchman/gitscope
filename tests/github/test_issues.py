@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+from gitscope.date_range import DateRange
 from gitscope.github.errors import RateLimitSafetyError
 from gitscope.github.issues import IssueCollector
 from gitscope.models.issue import IssueState
@@ -89,6 +90,21 @@ async def test_issue_collector_paginates_and_normalizes() -> None:
     assert result.issues[1].comment_count == 2
     assert [variables["cursor"] for variables in graphql.variables] == [None, "next"]
     assert result.stats.api_requests == 2
+
+
+@pytest.mark.anyio
+async def test_issue_collector_applies_created_date_range() -> None:
+    graphql = StubGraphQL(
+        [issue_page([issue_node(1)], has_next_page=False, cursor=None, issue_count=1)]
+    )
+    result = await IssueCollector(graphql).collect(  # type: ignore[arg-type]
+        "josys-src",
+        ("frontend",),
+        "octocat",
+        date_range=DateRange.parse("2026-02-01", "2026-02-28"),
+    )
+    assert result.issues == ()
+    assert graphql.variables[0]["query"].endswith("created:2026-02-01..2026-02-28")
 
 
 @pytest.mark.anyio

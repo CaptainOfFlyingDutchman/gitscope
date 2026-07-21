@@ -10,7 +10,7 @@ wheel as an isolated command-line tool:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.1/gitscope-0.2.1-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.3.0/gitscope-0.3.0-py3-none-any.whl
 gitscope --version
 gitscope doctor
 ```
@@ -22,7 +22,7 @@ Alternatively, install directly from the immutable Git tag:
 
 ```bash
 uv tool install \
-  'git+https://github.com/CaptainOfFlyingDutchman/gitscope.git@v0.2.1'
+  'git+https://github.com/CaptainOfFlyingDutchman/gitscope.git@v0.3.0'
 ```
 
 To upgrade later, install the new version's wheel URL with `--force`.
@@ -33,7 +33,7 @@ Release candidates can be exercised without publishing them:
 
 ```bash
 uv build
-uv tool install dist/gitscope-0.2.1-py3-none-any.whl
+uv tool install dist/gitscope-0.3.0-py3-none-any.whl
 gitscope --version
 ```
 
@@ -116,6 +116,22 @@ that repository; use the explicit allowlist when that edge case matters.
 ```bash
 gitscope analyze --org example-org --user octocat
 ```
+
+Use `--since` and `--until` to select inclusive UTC calendar dates:
+
+```bash
+gitscope analyze \
+  --org example-org \
+  --user octocat \
+  --since 2024-01-01 \
+  --until 2025-12-31
+```
+
+Either option may be used independently. Commits use their author timestamp,
+pull requests and issues use their creation timestamp, and reviews use their
+submission timestamp (falling back to creation when GitHub provides no
+submission value). Pull-request and issue outcomes remain their current state.
+Without date options, analysis covers the complete available history.
 
 The default output is `career-report/`. Derived formats can later be regenerated
 without GitHub access:

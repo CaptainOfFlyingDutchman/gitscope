@@ -8,6 +8,7 @@ import pytest
 import respx
 
 from gitscope.config import Settings
+from gitscope.date_range import DateRange
 from gitscope.git.collection import GitCollection
 from gitscope.report.generate import generate_career_report
 from gitscope.repository_scope import RepositoryScope
@@ -115,6 +116,7 @@ async def test_generate_career_report_builds_and_writes_schema(
     generated = await generate_career_report(
         settings,
         scope,
+        date_range=DateRange.parse("2026-01-01", "2026-01-31"),
         scope_observer=lambda context: observed_scopes.append(len(context.discovery.repositories)),
         git_scope_observer=lambda inspected, selected: observed_git_scopes.append(
             (inspected, selected)
@@ -130,7 +132,11 @@ async def test_generate_career_report_builds_and_writes_schema(
     assert generated.csv_path.exists()
     assert len(generated.chart_paths) == 13
     assert all(path.exists() for path in generated.chart_paths)
-    assert generated.report.schema_version == "1.5"
+    assert generated.report.schema_version == "1.6"
+    assert generated.report.collection.analysis_start is not None
+    assert generated.report.collection.analysis_start.isoformat() == "2026-01-01"
+    assert generated.report.collection.analysis_end is not None
+    assert generated.report.collection.analysis_end.isoformat() == "2026-01-31"
     assert generated.report.collection.github_api_requests == (6 if all_repositories else 5)
     assert generated.report.collection.git_repositories_processed == 1
     assert generated.report.commit_summary.total == 0
@@ -153,3 +159,6 @@ async def test_generate_career_report_builds_and_writes_schema(
     expected_qualifier = "org:josys-src" if all_repositories else "repo:josys-src/frontend"
     assert len(contribution_queries) == 3
     assert all(query.startswith(expected_qualifier) for query in contribution_queries)
+    assert contribution_queries[0].endswith("created:2026-01-01..2026-01-31")
+    assert contribution_queries[1].endswith("created:2026-01-01..2026-01-31")
+    assert "created:" not in contribution_queries[2]

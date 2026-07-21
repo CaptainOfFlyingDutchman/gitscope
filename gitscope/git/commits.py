@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
+from gitscope.date_range import LIFETIME_DATE_RANGE, DateRange
 from gitscope.git.identities import AuthorIdentities
 from gitscope.git.languages import classify_file
 from gitscope.git.runner import run_git
@@ -20,15 +21,17 @@ def collect_repository_commits(
     repository: str,
     path: Path,
     identities: AuthorIdentities,
+    date_range: DateRange = LIFETIME_DATE_RANGE,
 ) -> tuple[CommitContribution, ...]:
     """Return target-authored commits from every cached ref in one Git traversal."""
-    return analyze_repository_commits(repository, path, identities).commits
+    return analyze_repository_commits(repository, path, identities, date_range).commits
 
 
 def analyze_repository_commits(
     repository: str,
     path: Path,
     identities: AuthorIdentities,
+    date_range: DateRange = LIFETIME_DATE_RANGE,
 ) -> RepositoryCommitAnalysis:
     """Return authored commits and path-free extension/language change totals."""
     output = run_git(
@@ -56,6 +59,9 @@ def analyze_repository_commits(
         sha, authored_at, author_name, author_email, parents = fields
         if not identities.matches(author_name, author_email):
             continue
+        authored_datetime = datetime.fromisoformat(authored_at)
+        if not date_range.contains(authored_datetime):
+            continue
         additions, deletions, file_changes = _parse_numstat(stats)
         for extension, language, added, deleted in file_changes:
             totals = file_totals[(extension, language)]
@@ -66,7 +72,7 @@ def analyze_repository_commits(
             CommitContribution(
                 sha=sha,
                 repository=repository,
-                authored_at=datetime.fromisoformat(authored_at),
+                authored_at=authored_datetime,
                 additions=additions,
                 deletions=deletions,
                 files_changed=len(file_changes),

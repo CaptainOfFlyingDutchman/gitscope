@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+from gitscope.date_range import DateRange
 from gitscope.github.errors import RateLimitSafetyError
 from gitscope.github.prs import PullRequestCollector
 from gitscope.models.pull_request import PullRequestState
@@ -97,6 +98,21 @@ async def test_pull_request_collector_paginates_and_normalizes() -> None:
     assert result.pull_requests[0].commit_count == 3
     assert [variables["cursor"] for variables in graphql.variables] == [None, "next"]
     assert result.stats.api_requests == 2
+
+
+@pytest.mark.anyio
+async def test_pull_request_collector_applies_created_date_range() -> None:
+    graphql = StubGraphQL(
+        [pull_request_page([pull_request_node(1)], has_next_page=False, cursor=None, issue_count=1)]
+    )
+    result = await PullRequestCollector(graphql).collect(  # type: ignore[arg-type]
+        "josys-src",
+        ("frontend",),
+        "octocat",
+        date_range=DateRange.parse("2026-02-01", "2026-02-28"),
+    )
+    assert result.pull_requests == ()
+    assert graphql.variables[0]["query"].endswith("created:2026-02-01..2026-02-28")
 
 
 @pytest.mark.anyio

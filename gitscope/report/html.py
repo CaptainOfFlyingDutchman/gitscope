@@ -145,6 +145,7 @@ def write_html_report(report: CareerReport, output_directory: Path) -> Path:
         repositories=repositories,
         recent_pull_requests=recent_pull_requests,
         recent_issues=recent_issues,
+        analysis_period=_analysis_period(report),
     )
 
     stylesheet = (_TEMPLATE_DIRECTORY / "styles.css").read_text(encoding="utf-8")
@@ -164,7 +165,8 @@ def build_contribution_heatmap(report: CareerReport) -> ContributionHeatmap:
     activity.update((review.submitted_at or review.created_at).date() for review in report.reviews)
     activity.update(issue.created_at.date() for issue in report.issues)
 
-    end = report.collection.generated_at.date()
+    generated_end = report.collection.generated_at.date()
+    end = min(generated_end, report.collection.analysis_end or generated_end)
     current_week_start = end - timedelta(days=(end.weekday() + 1) % 7)
     start = current_week_start - timedelta(weeks=52)
     positive = sorted(value for day, value in activity.items() if start <= day <= end and value)
@@ -222,6 +224,18 @@ def _heatmap_level(value: int, thresholds: tuple[int, int, int]) -> int:
 def _format_date(value: date | datetime) -> str:
     formatted = value.strftime("%b")
     return f"{formatted} {value.day}, {value:%Y}"
+
+
+def _analysis_period(report: CareerReport) -> str:
+    start = report.collection.analysis_start
+    end = report.collection.analysis_end
+    if start is not None and end is not None:
+        return f"{_format_date(start)} to {_format_date(end)}"
+    if start is not None:
+        return f"Since {_format_date(start)}"
+    if end is not None:
+        return f"Through {_format_date(end)}"
+    return "Lifetime"
 
 
 def _format_duration(hours: float) -> str:

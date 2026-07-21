@@ -109,6 +109,7 @@ def build_resume_document(report: CareerReport, profile: ResumeProfile) -> Resum
         if item.name.casefold() not in _RESUME_TECHNOLOGY_EXCLUSIONS
     )[:6]
     period = _period_label(timeline.first_contribution, timeline.last_contribution)
+    analysis_window = _analysis_window(report)
     technology_clause = (
         f" Primary contributed technologies include {_natural_list(technologies)}."
         if technologies
@@ -118,7 +119,7 @@ def build_resume_document(report: CareerReport, profile: ResumeProfile) -> Resum
     summary = (
         f"{profile.title} at {profile.company} with a documented engineering contribution "
         f"history across {report.collection.repository_count:,} repositories in "
-        f"{report.organization}. The collected record spans {period} and includes "
+        f"{report.organization}. The {analysis_window} analysis record spans {period} and includes "
         f"{commits.total:,} authored commits, {pull_requests.total:,} authored pull requests, "
         f"{issue_clause}and {reviews.total:,} submitted code reviews."
         f"{technology_clause}"
@@ -304,6 +305,18 @@ def _period_label(first: datetime | None, last: datetime | None) -> str:
     if first is None or last is None:
         return "the available report period"
     return f"{first:%B %Y} to {last:%B %Y}"
+
+
+def _analysis_window(report: CareerReport) -> str:
+    start = report.collection.analysis_start
+    end = report.collection.analysis_end
+    if start is not None and end is not None:
+        return f"{_format_date(start)} through {_format_date(end)} UTC"
+    if start is not None:
+        return f"since {_format_date(start)} UTC"
+    if end is not None:
+        return f"through {_format_date(end)} UTC"
+    return "lifetime"
 
 
 def _natural_list(values: tuple[str, ...]) -> str:

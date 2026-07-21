@@ -43,6 +43,7 @@ def _render_markdown(report: CareerReport) -> list[str]:
             f"Generated {_format_date(report.collection.generated_at)} · "
             f"Schema {report.schema_version}"
         ),
+        f"Analysis window (UTC): **{_analysis_window(report)}**",
         "",
         "[Open the interactive HTML dashboard](report.html)",
         "",
@@ -324,6 +325,18 @@ def _activity_label(period: ActivityPeriod | None) -> str:
     if period is None:
         return "Not available"
     return f"{period.period} ({period.total:,} activities)"
+
+
+def _analysis_window(report: CareerReport) -> str:
+    start = report.collection.analysis_start
+    end = report.collection.analysis_end
+    if start is not None and end is not None:
+        return f"{_format_date(start)} through {_format_date(end)}"
+    if start is not None:
+        return f"{_format_date(start)} through present"
+    if end is not None:
+        return f"Beginning through {_format_date(end)}"
+    return "Lifetime"
 
 
 def _format_optional_date(value: date | datetime | None) -> str:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -191,6 +191,8 @@ class CollectionMetadata(ReportModel):
     """Provenance and completeness information for a report run."""
 
     generated_at: datetime
+    analysis_start: date | None = None
+    analysis_end: date | None = None
     repository_scope_file: str
     repository_count: int
     github_api_requests: int
@@ -205,7 +207,7 @@ class CollectionMetadata(ReportModel):
 class CareerReport(ReportModel):
     """Stable, versioned JSON representation of collected GitScope data."""
 
-    schema_version: Literal["1.3", "1.4", "1.5"] = "1.5"
+    schema_version: Literal["1.3", "1.4", "1.5", "1.6"] = "1.6"
     organization: str
     identity: ReportIdentity
     collection: CollectionMetadata

@@ -16,7 +16,7 @@ validated semantic-version tag is the only publication trigger.
 Run the same validation used by release automation:
 
 ```bash
-uv run python scripts/validate_release.py --tag v0.2.1
+uv run python scripts/validate_release.py --tag v0.3.0
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy gitscope scripts
@@ -29,8 +29,8 @@ Only after the release-preparation commit is pushed and CI succeeds, create and
 push the annotated tag:
 
 ```bash
-git tag -a v0.2.1 -m "GitScope 0.2.1"
-git push origin v0.2.1
+git tag -a v0.3.0 -m "GitScope 0.3.0"
+git push origin v0.3.0
 ```
 
 The second command publishes the tag and triggers `.github/workflows/release.yml`.
@@ -51,8 +51,8 @@ release exists; make corrections in the next patch release instead.
 ## Verify publication
 
 ```bash
-gh release view v0.2.1
-gh release download v0.2.1 --dir release-assets
+gh release view v0.3.0
+gh release download v0.3.0 --dir release-assets
 ```
 
 Verify the checksum manifest from the download directory:

@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 from gitscope import __version__
 from gitscope.cli import app
 from gitscope.config import Settings
+from gitscope.date_range import LIFETIME_DATE_RANGE, DateRange
 from gitscope.github.discovery import DiscoveryContext
 from gitscope.github.errors import AuthenticationError
 from gitscope.github.models import AuthenticatedUser, RateLimit, RepositoryDiscovery
@@ -34,6 +35,26 @@ def test_version() -> None:
 
     assert result.exit_code == 0
     assert f"GitScope {__version__}" in result.stdout
+
+
+def test_analyze_rejects_invalid_date_range() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--org",
+            "josys-src",
+            "--user",
+            "octocat",
+            "--since",
+            "2026-02-01",
+            "--until",
+            "2026-01-01",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Date range error" in result.stderr
 
 
 def test_resume_generates_offline_portfolio(tmp_path: Path) -> None:
@@ -115,7 +136,7 @@ def test_export_html_regenerates_dashboard_without_credentials(tmp_path: Path) -
     )
 
     assert result.exit_code == 0
-    assert "Loaded GitScope schema 1.5" in result.stdout
+    assert "Loaded GitScope schema 1.6" in result.stdout
     assert "Contribution summary" in result.stdout
     assert "no GitHub API or Git repository access" in result.stdout
     assert (output_directory / "report.html").exists()
@@ -281,6 +302,7 @@ def test_analyze_generates_report(
         git_concurrency: int = 4,
         scope_observer: object | None = None,
         git_scope_observer: object | None = None,
+        date_range: DateRange = LIFETIME_DATE_RANGE,
     ) -> GeneratedCareerReport:
         assert settings.organization == "josys-src"
         assert repository_scope.names == ("frontend",)
@@ -290,6 +312,7 @@ def test_analyze_generates_report(
         assert git_concurrency == 4
         assert scope_observer is None
         assert git_scope_observer is None
+        assert date_range == DateRange.parse("2025-01-01", "2025-12-31")
         context = DiscoveryContext(
             authenticated_user=AuthenticatedUser(login="octocat", id=1),
             discovery=RepositoryDiscovery(
@@ -385,6 +408,10 @@ def test_analyze_generates_report(
             "--user",
             "CaptainOfFlyingDutchman",
             "--refresh",
+            "--since",
+            "2025-01-01",
+            "--until",
+            "2025-12-31",
             "--repos-file",
             str(repositories_file),
         ],
@@ -392,6 +419,7 @@ def test_analyze_generates_report(
     )
 
     assert result.exit_code == 0
+    assert "2025-01-01 through 2025-12-31" in result.stdout
     assert "Authenticated as octocat" in result.stdout
     assert "Validated 0 allowlisted repositories in josys-src" in result.stdout
     assert "Contribution summary" in result.stdout
@@ -426,6 +454,7 @@ def test_analyze_reports_github_error(
         git_concurrency: int = 4,
         scope_observer: object | None = None,
         git_scope_observer: object | None = None,
+        date_range: DateRange = LIFETIME_DATE_RANGE,
     ) -> GeneratedCareerReport:
         del refresh
         del rate_limit_reserve
@@ -433,6 +462,7 @@ def test_analyze_reports_github_error(
         del git_concurrency
         del scope_observer
         del git_scope_observer
+        del date_range
         raise AuthenticationError("token rejected")
 
     monkeypatch.setattr("gitscope.cli.generate_career_report", rejected_generation)

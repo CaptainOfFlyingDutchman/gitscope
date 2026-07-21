@@ -4,6 +4,24 @@ All notable changes to GitScope are documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-21
+
+### Added
+
+- Optional inclusive `--since` and `--until` UTC date bounds for contribution analysis.
+- Analysis-window metadata in schema 1.6, HTML, Markdown, CSV, and résumé-derived content.
+
+### Changed
+
+- Commits, authored pull requests, authored issues, and submitted reviews now use explicit activity-specific timestamps when a date window is selected.
+- Language, file-extension, repository, timeline, and chart analytics are derived only from in-range activity.
+- All-repositories commit prefiltering uses the selected date window before choosing full-history mirrors.
+
+### Compatibility
+
+- Omitting both date options preserves lifetime analysis, and offline export continues to reproduce the window already stored in `report.json`.
+- Report readers continue to accept schemas 1.3 through 1.5.
+
 ## [0.2.1] - 2026-07-21
 
 ### Fixed
@@ -61,6 +79,7 @@ All notable changes to GitScope are documented in this file. The format follows
 - Generated reports, caches, credentials, identity files, and repository lists are ignored by Git.
 - Distribution verification rejects private state, generated reports, and missing runtime templates.
 
+[0.3.0]: https://github.com/CaptainOfFlyingDutchman/gitscope/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/CaptainOfFlyingDutchman/gitscope/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/CaptainOfFlyingDutchman/gitscope/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CaptainOfFlyingDutchman/gitscope/compare/v0.1.0...v0.1.1

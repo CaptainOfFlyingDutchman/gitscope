@@ -5,6 +5,7 @@ import json
 import httpx
 import pytest
 
+from gitscope.date_range import DateRange
 from gitscope.github.commit_presence import CommitPresenceCollector
 from gitscope.github.errors import RateLimitSafetyError
 from gitscope.github.graphql import GitHubGraphQLClient
@@ -99,3 +100,38 @@ async def test_commit_presence_stops_before_crossing_rate_limit_reserve() -> Non
             )
 
     assert request_count == 1
+
+
+@pytest.mark.anyio
+async def test_commit_presence_passes_utc_date_bounds() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.read())
+        assert "since: $since" in body["query"]
+        assert "until: $until" in body["query"]
+        assert body["variables"]["since"] == "2025-01-01T00:00:00Z"
+        assert body["variables"]["until"].startswith("2025-12-31T23:59:59.999999")
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "repo0": _repository("active", 1),
+                    "rateLimit": {
+                        "cost": 2,
+                        "remaining": 4998,
+                        "resetAt": "2026-07-20T12:00:00Z",
+                    },
+                }
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        result = await CommitPresenceCollector(
+            GitHubGraphQLClient(GitHubHTTPClient("secret", client=client))
+        ).collect(
+            "josys-src",
+            ("active",),
+            frozenset({"octocat@example.com"}),
+            date_range=DateRange.parse("2025-01-01", "2025-12-31"),
+        )
+
+    assert result.repositories == frozenset({"josys-src/active"})

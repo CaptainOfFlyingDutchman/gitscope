@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+from gitscope.date_range import DateRange
 from gitscope.github.errors import RateLimitSafetyError
 from gitscope.github.reviews import ReviewCollector
 from gitscope.models.review import ReviewState
@@ -105,6 +106,19 @@ async def test_review_collector_collects_nested_review_pages() -> None:
     ]
     assert all(review.repository == "josys-src/frontend" for review in result.reviews)
     assert result.stats.api_requests == 2
+
+
+@pytest.mark.anyio
+async def test_review_collector_filters_by_submission_date_without_narrowing_pr_search() -> None:
+    graphql = StubGraphQL([reviewed_search_page(has_more_reviews=False)])
+    result = await ReviewCollector(graphql).collect(  # type: ignore[arg-type]
+        "josys-src",
+        ("frontend",),
+        "octocat",
+        date_range=DateRange.parse("2026-02-01", "2026-02-28"),
+    )
+    assert result.reviews == ()
+    assert "created:" not in graphql.variables[0]["query"]
 
 
 @pytest.mark.anyio

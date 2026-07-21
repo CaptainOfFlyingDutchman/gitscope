@@ -118,7 +118,7 @@ an isolated command-line tool:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.1/gitscope-0.2.1-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.3.0/gitscope-0.3.0-py3-none-any.whl
 gitscope --version
 ```
 
@@ -147,6 +147,19 @@ Then run:
 ```bash
 uv run gitscope analyze --org my-org --user my-user
 ```
+
+Optionally limit contribution activity to inclusive UTC calendar dates:
+
+```bash
+uv run gitscope analyze \
+  --org my-org \
+  --user my-user \
+  --since 2024-01-01 \
+  --until 2025-12-31
+```
+
+Either bound may be omitted. Without both options GitScope preserves its
+lifetime-analysis behavior.
 
 The private repository allowlist is the safe default. To intentionally analyze
 every organization repository visible to the token, use:
@@ -671,7 +684,7 @@ The CLI should feel polished.
 Examples:
 
 ```
-gitscope analyze --org josys-src --user octocat
+gitscope analyze --org josys-src --user octocat --since 2024-01-01 --until 2025-12-31
 
 gitscope resume
 
@@ -761,7 +774,7 @@ happily install from its versioned GitHub release:
 
 ```bash
 uv tool install \
-  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.2.1/gitscope-0.2.1-py3-none-any.whl
+  https://github.com/CaptainOfFlyingDutchman/gitscope/releases/download/v0.3.0/gitscope-0.3.0-py3-none-any.whl
 ```
 
 and immediately use to generate a polished report for any GitHub organization they have access to.

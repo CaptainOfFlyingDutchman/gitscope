@@ -53,9 +53,13 @@ def smoke_test(executable: Path, report_path: Path, expected_version: str) -> No
                 raise RuntimeError(f"Installed help is missing the {command} command")
         installed_python = executable.parent / ("python.exe" if os.name == "nt" else "python")
         analyze_options = installed_analyze_options(installed_python, working_directory)
-        if "--all-repositories" not in analyze_options:
+        required_analyze_options = {"--all-repositories", "--since", "--until"}
+        missing_analyze_options = required_analyze_options.difference(analyze_options)
+        if missing_analyze_options:
             raise RuntimeError(
-                "Installed analyze command is missing --all-repositories; registered options: "
+                "Installed analyze command is missing required options "
+                + ", ".join(sorted(missing_analyze_options))
+                + "; registered options: "
                 + ", ".join(analyze_options)
             )
 

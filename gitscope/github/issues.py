@@ -7,6 +7,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from gitscope.date_range import LIFETIME_DATE_RANGE, DateRange
 from gitscope.github.collection import CollectionStats
 from gitscope.github.errors import InvalidGitHubResponseError
 from gitscope.github.graphql import GitHubGraphQLClient
@@ -127,6 +128,7 @@ class IssueCollector:
         *,
         refresh: bool = False,
         organization_wide: bool = False,
+        date_range: DateRange = LIFETIME_DATE_RANGE,
     ) -> IssueCollection:
         """Collect authored issues for an allowlist or the visible organization scope."""
         issues: dict[str, Issue] = {}
@@ -142,10 +144,14 @@ class IssueCollector:
                     if repository_name is None
                     else f"repo:{organization}/{repository_name}"
                 )
+                qualifier = date_range.search_qualifier
+                query = f"{scope} is:issue author:{username}"
+                if qualifier:
+                    query = f"{query} {qualifier}"
                 data, from_cache = await self.graphql.execute(
                     AUTHORED_ISSUES_QUERY,
                     {
-                        "query": f"{scope} is:issue author:{username}",
+                        "query": query,
                         "cursor": cursor,
                     },
                     refresh=refresh,
@@ -172,7 +178,10 @@ class IssueCollector:
                     )
 
         ordered = tuple(
-            sorted(issues.values(), key=lambda item: (item.created_at, item.repository))
+            sorted(
+                (item for item in issues.values() if date_range.contains(item.created_at)),
+                key=lambda item: (item.created_at, item.repository),
+            )
         )
         return IssueCollection(issues=ordered, stats=stats)
 

@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
+from gitscope.date_range import LIFETIME_DATE_RANGE, DateRange
 from gitscope.git.clone import prepare_repository
 from gitscope.git.commits import analyze_repository_commits
 from gitscope.git.identities import AuthorIdentities
@@ -33,6 +34,7 @@ def collect_git_contributions(
     identities: AuthorIdentities,
     refresh: bool = False,
     concurrency: int = 4,
+    date_range: DateRange = LIFETIME_DATE_RANGE,
 ) -> GitCollection:
     """Prepare and inspect repositories concurrently without failing the whole report."""
     worker_count = max(1, min(concurrency, len(repositories)))
@@ -42,7 +44,7 @@ def collect_git_contributions(
 
     def inspect(repository: str) -> RepositoryCommitAnalysis:
         checkout = prepare_repository(repository, cache_directory, token, refresh=refresh)
-        return analyze_repository_commits(repository, checkout.path, identities)
+        return analyze_repository_commits(repository, checkout.path, identities, date_range)
 
     if not repositories:
         return GitCollection((), (), 0, 0, ())

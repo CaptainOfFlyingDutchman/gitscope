@@ -144,6 +144,7 @@ def test_write_html_report_is_private_offline_and_escaped(tmp_path: Path) -> Non
     assert stat.S_IMODE((output_directory / "theme.js").stat().st_mode) == 0o600
     assert stat.S_IMODE((output_directory / "favicon.svg").stat().st_mode) == 0o600
     assert "Contribution overview" in html
+    assert "<dt>Analysis window</dt><dd>Lifetime</dd>" in html
     assert "Contribution heatmap" in html
     assert "Made with care and" in html
     assert "Manvendra Singh" in html
