@@ -15,9 +15,6 @@ def run_command(executable: Path, arguments: list[str], working_directory: Path)
     """Run one installed CLI command and return its combined diagnostic output."""
     environment = os.environ.copy()
     environment.pop("GITHUB_TOKEN", None)
-    # Rich derives help-table width from COLUMNS even when output is captured.
-    # Keep option names intact and the smoke assertion deterministic in CI.
-    environment["COLUMNS"] = "120"
     completed = subprocess.run(
         [str(executable), *arguments],
         cwd=working_directory,
@@ -54,9 +51,13 @@ def smoke_test(executable: Path, report_path: Path, expected_version: str) -> No
         for command in ("analyze", "cache", "doctor", "export", "resume"):
             if command not in help_output:
                 raise RuntimeError(f"Installed help is missing the {command} command")
-        analyze_help = run_command(executable, ["analyze", "--help"], working_directory)
-        if "--all-repositories" not in analyze_help:
-            raise RuntimeError("Installed analyze help is missing --all-repositories")
+        installed_python = executable.parent / ("python.exe" if os.name == "nt" else "python")
+        analyze_options = installed_analyze_options(installed_python, working_directory)
+        if "--all-repositories" not in analyze_options:
+            raise RuntimeError(
+                "Installed analyze command is missing --all-repositories; registered options: "
+                + ", ".join(analyze_options)
+            )
 
         run_command(
             executable,
@@ -107,6 +108,25 @@ def smoke_test(executable: Path, report_path: Path, expected_version: str) -> No
         missing = sorted(str(path) for path in required_outputs if not path.is_file())
         if missing:
             raise RuntimeError(f"Installed wheel did not generate: {', '.join(missing)}")
+
+
+def installed_analyze_options(python: Path, working_directory: Path) -> tuple[str, ...]:
+    """Inspect options registered by the installed wheel without rendering Rich help."""
+    probe = """
+from gitscope.cli import app
+from typer.main import get_command
+
+root = get_command(app)
+analyze = root.commands["analyze"]
+options = sorted(
+    option
+    for parameter in analyze.params
+    for option in getattr(parameter, "opts", ())
+)
+print("\\n".join(options))
+"""
+    output = run_command(python, ["-c", probe], working_directory)
+    return tuple(line for line in output.splitlines() if line.startswith("--"))
 
 
 def main() -> int:

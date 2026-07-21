@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import hashlib
-import sys
 from pathlib import Path
 
 import pytest
 
 from scripts.create_checksums import create_checksums
-from scripts.smoke_test_wheel import run_command
+from scripts.smoke_test_wheel import installed_analyze_options
 from scripts.validate_release import validate_release
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -46,16 +45,7 @@ def test_create_checksums_rejects_empty_artifact(tmp_path: Path) -> None:
         create_checksums((artifact,), tmp_path / "SHA256SUMS")
 
 
-def test_smoke_commands_use_stable_help_width(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("COLUMNS", "60")
+def test_installed_command_probe_finds_all_repositories_option(tmp_path: Path) -> None:
+    options = installed_analyze_options(PROJECT_ROOT / ".venv/bin/python", tmp_path)
 
-    output = run_command(
-        Path(sys.executable),
-        ["-c", "import os; print(os.environ['COLUMNS'])"],
-        tmp_path,
-    )
-
-    assert output.strip() == "120"
+    assert "--all-repositories" in options
